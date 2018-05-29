@@ -1,4 +1,6 @@
 # verdaccio-google-cloud
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fverdaccio%2Fverdaccio-google-cloud.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fverdaccio%2Fverdaccio-google-cloud?ref=badge_shield)
+
 ☁️📦 Google Cloud storage plugin for verdaccio
 
 ```
@@ -54,3 +56,6 @@ This plugin is experimental and unstable. It requires further testing.
 ## License
 
 [MIT Licensed](http://www.opensource.org/licenses/mit-license.php)
+
+
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fverdaccio%2Fverdaccio-google-cloud.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fverdaccio%2Fverdaccio-google-cloud?ref=badge_large)
