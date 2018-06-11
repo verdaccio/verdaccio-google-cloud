@@ -5,8 +5,8 @@
 
 ```
 npm i -g verdaccio-google-cloud
-yarn global add verdaccio@verdaccio-google-cloud
-pnpm i -g verdaccio@verdaccio-google-cloud
+yarn global add verdaccio-google-cloud
+pnpm i -g verdaccio-google-cloud
 ```
 
 ### Requirements
