@@ -4,9 +4,9 @@
 ☁️📦 Google Cloud storage plugin for verdaccio
 
 ```
-npm i -g verdaccio@verdaccio-google-cloud
-yarn global add verdaccio@verdaccio-google-cloud
-pnpm i -g verdaccio@verdaccio-google-cloud
+npm i -g verdaccio-google-cloud
+yarn global add verdaccio-google-cloud
+pnpm i -g verdaccio-google-cloud
 ```
 
 ### Requirements
@@ -27,7 +27,7 @@ Complete configuration example:
 ```yaml
 store:
   google-cloud:
-	## google project id
+   ## google project id
    projectId: project-01 || env (GOOGLE_CLOUD_VERDACCIO_PROJECT_ID)
 
    ## namespace for metadata database
