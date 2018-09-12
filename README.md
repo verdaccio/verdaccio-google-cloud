@@ -1,9 +1,12 @@
 # verdaccio-google-cloud
+[![npm](https://img.shields.io/npm/v/verdaccio-google-cloud.svg)](https://www.npmjs.com/package/verdaccio-google-cloud)
 [![CircleCI](https://circleci.com/gh/verdaccio/verdaccio-google-cloud.svg?style=svg)](https://circleci.com/gh/verdaccio/verdaccio-google-cloud)
 [![codecov](https://codecov.io/gh/verdaccio/verdaccio-google-cloud/branch/master/graph/badge.svg)](https://codecov.io/gh/verdaccio/verdaccio-google-cloud)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fverdaccio%2Fverdaccio-google-cloud.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fverdaccio%2Fverdaccio-google-cloud?ref=badge_shield)
 
 ☁️📦 Google Cloud storage plugin for verdaccio
+
+⚠️⚠️ This plugin is experimental and might be unstable. It requires further testing. ⚠️⚠️
 
 ```
 npm i -g verdaccio-google-cloud
@@ -54,7 +57,7 @@ Define `env` whether you want load the value from environment variables.
 
 ## Disclaimer
 
-This plugin is experimental and unstable. It requires further testing.
+⚠️⚠️ This plugin is experimental and might be unstable. It requires further testing. ⚠️⚠️
 
 ## License
 
