@@ -1,21 +1,17 @@
-// @flow
-
 import createError from 'http-errors';
 
 import { UploadTarball, ReadTarball } from '@verdaccio/streams';
-
-import type { HttpError } from 'http-errors';
-import type { IUploadTarball, IReadTarball } from '@verdaccio/streams';
-import type { Package, Callback, Logger } from '@verdaccio/types';
-import type { IPackageStorageManager } from '@verdaccio/local-storage';
-import type { VerdaccioConfigGoogleStorage } from '../types';
+import { HttpError } from 'http-errors';
+import { IUploadTarball, IReadTarball } from '@verdaccio/streams';
+import { IPackageStorageManager, Package, Callback, Logger } from '@verdaccio/types';
+import { VerdaccioConfigGoogleStorage } from '../types';
 
 export const noSuchFile: string = 'ENOENT';
 export const fileExist: string = 'EEXISTS';
 export const pkgFileName = 'package.json';
 export const defaultValidation = 'crc32c';
 
-declare type StorageType = Package | void;
+// declare Storage= Package | void;
 
 export const fSError = function(message: string, code: number = 404): HttpError {
   const err: HttpError = createError(code, message);

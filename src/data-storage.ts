@@ -5,11 +5,10 @@ import Datastore from '@google-cloud/datastore';
 
 import GoogleCloudStorageHandler from './storage';
 import StorageHelper from './storage-helper';
-import type { Logger, Callback } from '@verdaccio/types';
-import type { IPluginStorage } from '@verdaccio/local-storage';
-import type { VerdaccioConfigGoogleStorage, GoogleCloudOptions, GoogleDataStorage } from '../types';
+import { Logger, Callback, IPluginStorage } from '@verdaccio/types';
+import { VerdaccioConfigGoogleStorage, GoogleCloudOptions, GoogleDataStorage } from '../types';
 
-class GoogleCloudDatabase implements IPluginStorage {
+class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage> {
   helper: any;
   path: string;
   logger: Logger;

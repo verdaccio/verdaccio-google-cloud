@@ -1,5 +1,4 @@
-// @flow
-import type { Config } from '@verdaccio/types';
+import { Config } from '@verdaccio/types';
 
 export interface VerdaccioConfigGoogleStorage extends Config {
   // https://cloud.google.com/nodejs/docs/reference/storage/1.6.x/Bucket

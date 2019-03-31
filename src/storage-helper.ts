@@ -1,5 +1,3 @@
-// @flow
-
 export default class StorageHelper {
   datastore: any;
   storage: any;
