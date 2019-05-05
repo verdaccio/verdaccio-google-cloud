@@ -3,7 +3,7 @@ import createError from 'http-errors';
 import { UploadTarball, ReadTarball, IUploadTarball, IReadTarball } from '@verdaccio/streams';
 import { HttpError } from 'http-errors';
 import { Package, Callback, Logger, IPackageStorageManager } from '@verdaccio/types';
-import { VerdaccioConfigGoogleStorage } from '../types';
+import { VerdaccioConfigGoogleStorage } from './types';
 import { Bucket, File } from '@google-cloud/storage';
 
 export const noSuchFile: string = 'ENOENT';

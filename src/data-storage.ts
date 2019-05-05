@@ -4,7 +4,7 @@ import Datastore from '@google-cloud/datastore';
 import GoogleCloudStorageHandler from './storage';
 import StorageHelper from './storage-helper';
 import { Logger, Callback, IPluginStorage } from '@verdaccio/types';
-import { VerdaccioConfigGoogleStorage, GoogleCloudOptions, GoogleDataStorage } from '../types';
+import { VerdaccioConfigGoogleStorage, GoogleCloudOptions, GoogleDataStorage } from './types';
 
 class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage> {
   helper: any;

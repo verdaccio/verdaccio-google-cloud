@@ -3,6 +3,7 @@ npm-debug.log
 
 _storage/
 lib/
+out/
 node_modules/
 coverage/
 
