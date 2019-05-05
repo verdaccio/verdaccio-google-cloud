@@ -32,7 +32,7 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
       throw new Error('Google Cloud Storage requires a bucket name, please define one.');
     }
     this.bucketName = config.bucket;
-    this.data = this._createEmtpyDatabase();
+    this.data = this._createEmptyDatabase();
     this.helper = new StorageHelper(this.data.datastore, this.data.storage);
   }
 
@@ -148,9 +148,10 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
     return new GoogleCloudStorageHandler(packageInfo, this.data.storage, this.data.datastore, this.helper, this.config, this.logger);
   }
 
-  _createEmtpyDatabase(): GoogleDataStorage {
-    const datastore = new Datastore(this._getGoogleOptions(this.config));
-    const storage = new Storage(this._getGoogleOptions(this.config));
+  _createEmptyDatabase(): GoogleDataStorage {
+    const options = this._getGoogleOptions(this.config);
+    const datastore = new Datastore(options);
+    const storage = new Storage(options);
 
     const list: any = [];
     const files: any = {};

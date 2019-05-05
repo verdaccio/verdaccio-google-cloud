@@ -28,7 +28,7 @@
   "license": "MIT",
   "dependencies": {
     "@google-cloud/datastore": "^2.0.0",
-    "@google-cloud/storage": "^2.3.4",
+    "@google-cloud/storage": "^2.5.0",
     "@verdaccio/local-storage": "^2.1.0",
     "@verdaccio/streams": "^1.0.0",
     "fast-crc32c": "^1.0.4",
