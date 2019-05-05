@@ -9,7 +9,7 @@ import { generatePackage } from './partials/utils.helpers';
 
 import { VerdaccioConfigGoogleStorage } from '../types';
 
-import { Logger, ILocalData, ILocalPackageManager, Callback, Package } from '@verdaccio/types'
+import { Logger, ILocalData, ILocalPackageManager, Callback, Package } from '@verdaccio/types';
 
 type ITestLocalData = ILocalData<VerdaccioConfigGoogleStorage>;
 
@@ -323,18 +323,22 @@ describe('Google Cloud Storage', () => {
         if (store) {
           store.updatePackage(
             pkg.name,
-            (data: any, cb: Callback) => { // Handle Update
+            (data: any, cb: Callback) => {
+              // Handle Update
               cb();
             },
-            (name: string, json: any, cb: Callback) => { // Write Package
+            (name: string, json: any, cb: Callback) => {
+              // Write Package
               expect(json.test).toBe('test');
               cb(null);
             },
-            (json: any) => { // Transformation
+            (json: any) => {
+              // Transformation
               json.test = 'test';
               return json;
             },
-            (err: any) => { // on End
+            (err: any) => {
+              // on End
               expect(err).toBeNull();
               done();
             }
@@ -346,12 +350,18 @@ describe('Google Cloud Storage', () => {
         const store = cloudDatabase.getPackageStorage('');
         expect(store).not.toBeNull();
         if (store) {
-          store.updatePackage('fake404', () => {}, () => {}, () => {}, (err: any) => {
-            expect(err).not.toBeNull();
-            expect(err.code).toBe('ENOENT');
-            expect(err.message).toBe('no such package');
-            done();
-          });
+          store.updatePackage(
+            'fake404',
+            () => {},
+            () => {},
+            () => {},
+            (err: any) => {
+              expect(err).not.toBeNull();
+              expect(err.code).toBe('ENOENT');
+              expect(err.message).toBe('no such package');
+              done();
+            }
+          );
         }
       });
 
@@ -359,12 +369,18 @@ describe('Google Cloud Storage', () => {
         const store = cloudDatabase.getPackageStorage('');
         expect(store).not.toBeNull();
         if (store) {
-          store.updatePackage('fake404', () => {}, () => {}, () => {}, (err: any) => {
-            expect(err).not.toBeNull();
-            expect(err.code).toBe('ENOENT');
-            expect(err.message).toBe('no such package');
-            done();
-          });
+          store.updatePackage(
+            'fake404',
+            () => {},
+            () => {},
+            () => {},
+            (err: any) => {
+              expect(err).not.toBeNull();
+              expect(err.code).toBe('ENOENT');
+              expect(err.message).toBe('no such package');
+              done();
+            }
+          );
         }
       });
     });
@@ -462,7 +478,7 @@ describe('Google Cloud Storage', () => {
         if (store) {
           const readTarballStream = store.readTarball('fake-tarball.tgz');
 
-          readTarballStream.on('data', (data:any) => {
+          readTarballStream.on('data', (data: any) => {
             expect(data).toBeUndefined();
           });
 

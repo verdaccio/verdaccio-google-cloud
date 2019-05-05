@@ -108,18 +108,16 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
     // remove all files from storage
     const file = this._getBucket().file(`${this.name}`);
     this.logger.debug({ name: file.name }, 'gcloud: removing the package @{name} from storage');
-    file
-      .delete()
-      .then(
-        () => {
-          this.logger.debug({ name: file.name }, 'gcloud: package @{name} was deleted successfully from storage');
-          callback(null);
-        },
-        (err: any) => {
-          this.logger.error({ name: file.name, err: err.message }, 'gcloud: delete @{name} package has failed err: @{err}');
-          callback(fSError(err.message, 500));
-        }
-      );
+    file.delete().then(
+      () => {
+        this.logger.debug({ name: file.name }, 'gcloud: package @{name} was deleted successfully from storage');
+        callback(null);
+      },
+      (err: any) => {
+        this.logger.error({ name: file.name, err: err.message }, 'gcloud: delete @{name} package has failed err: @{err}');
+        callback(fSError(err.message, 500));
+      }
+    );
   }
 
   createPackage(name: string, metadata: Object, cb: Function): void {

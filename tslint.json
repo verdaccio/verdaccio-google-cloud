@@ -8,6 +8,8 @@
         "ordered-imports": false,
         "quotemark": false,
         "member-access": false,
+        "no-var-keyword": true,
+        "linebreak-style": true,
     },
     "rulesDirectory": []
 }

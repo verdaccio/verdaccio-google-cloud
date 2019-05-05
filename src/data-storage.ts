@@ -150,7 +150,7 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
 
   _createEmtpyDatabase(): GoogleDataStorage {
     const datastore = new Datastore(this._getGoogleOptions(this.config));
-    const storage =  new Storage(this._getGoogleOptions(this.config));
+    const storage = new Storage(this._getGoogleOptions(this.config));
 
     const list: any = [];
     const files: any = {};
