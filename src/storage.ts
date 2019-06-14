@@ -157,7 +157,10 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
       const file = this._buildFilePath(name, pkgFileName);
       try {
         await file.save(this._convertToString(metadata), {
-          validation: this.config.validation || defaultValidation
+          validation: this.config.validation || defaultValidation,
+          // Disable resumable uploads to avoid random? failures from google cloud
+          // @see https://stackoverflow.com/questions/53172050/google-cloud-storage-invalid-upload-request-error-bad-request
+          resumable: false
         });
         resolve(null);
       } catch (err) {
