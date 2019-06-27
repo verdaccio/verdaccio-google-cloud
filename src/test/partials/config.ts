@@ -1,4 +1,3 @@
-import { UpLinksConfList, PackageList, LoggerConf, Security } from '@verdaccio/types';
 import { VerdaccioConfigGoogleStorage } from '../../types';
 
 class Config implements VerdaccioConfigGoogleStorage {

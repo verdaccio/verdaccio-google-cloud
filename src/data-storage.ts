@@ -1,14 +1,14 @@
 import { Storage } from '@google-cloud/storage';
 import Datastore from '@google-cloud/datastore';
-import { getServiceUnavailable } from '@verdaccio/commons-api';
+import { getServiceUnavailable, getInternalError } from '@verdaccio/commons-api';
 import GoogleCloudStorageHandler from './storage';
-import StorageHelper from './storage-helper';
-import { Logger, Callback, IPluginStorage, Token, TokenFilter } from '@verdaccio/types';
+import StorageHelper, { IStorageHelper } from './storage-helper';
+import { Logger, Callback, IPluginStorage, Token, TokenFilter, IPackageStorageManager } from '@verdaccio/types';
 import { VerdaccioConfigGoogleStorage, GoogleCloudOptions, GoogleDataStorage } from './types';
 import { CommitResult } from '@google-cloud/datastore/request';
 
 class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage> {
-  private helper: any;
+  private helper: IStorageHelper;
   private path: string | undefined;
   public logger: Logger;
   private data: GoogleDataStorage;
@@ -57,11 +57,11 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
     return GOOGLE_OPTIONS;
   }
 
-  public search(onPackage: Callback, onEnd: Callback, validateName: any): void {
+  public search(onPackage: Callback, onEnd: Callback): void {
     onEnd();
   }
 
-  public saveToken(token: Token): Promise<any> {
+  public saveToken(token: Token): Promise<void> {
     return Promise.reject(getServiceUnavailable('[saveToken] method not implemented'));
   }
 
@@ -73,7 +73,7 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
     return Promise.reject(getServiceUnavailable('[readTokens] method not implemented'));
   }
 
-  public getSecret(): Promise<any> {
+  public getSecret(): Promise<string> {
     const key = this.data.datastore.key(['Secret', 'secret']);
     return this.data.datastore.get(key).then((results: any) => results[0] && results[0].secret);
   }
@@ -98,9 +98,11 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
         key: key,
         data: data
       })
-      .then(() => cb(null))
-      .catch(err => {
-        cb(new Error(err));
+      .then(function successAddDatabase(response: CommitResult): void {
+        cb(null);
+      })
+      .catch(function errorAddDatabase(err: Error): void {
+        cb(getInternalError(err.message));
       });
   }
 
@@ -117,7 +119,7 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
 
   public remove(name: string, cb: Callback): void {
     const deletedItems: any = [];
-    const sanityCheck = (deletedItems: any) => {
+    const sanityCheck = (deletedItems: any): null | Error => {
       if (typeof deletedItems === 'undefined' || deletedItems.length === 0 || deletedItems[0][0].indexUpdates === 0) {
         return new Error('not found');
       } else if (deletedItems[0][0].indexUpdates > 0) {
@@ -128,21 +130,25 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
     };
     this.helper
       .getEntities(this.kind)
-      .then(async (entities: any) => {
-        for (const item of entities) {
-          if (item.name === name) {
-            const deletedItem = await this._deleteItem(name, item);
-            deletedItems.push(deletedItem);
+      .then(
+        async (entities: any): Promise<void> => {
+          for (const item of entities) {
+            if (item.name === name) {
+              const deletedItem = await this._deleteItem(name, item);
+              deletedItems.push(deletedItem);
+            }
           }
+          cb(sanityCheck(deletedItems));
         }
-        cb(sanityCheck(deletedItems));
-      })
-      .catch((err: any) => {
-        cb(new Error(err));
-      });
+      )
+      .catch(
+        (err: Error): void => {
+          cb(getInternalError(err.message));
+        }
+      );
   }
 
-  get(cb: Callback) {
+  public get(cb: Callback): void {
     const query = this.helper.datastore.createQuery(this.kind);
     this.helper.runQuery(query).then((data: any) => {
       const names = data[0].reduce((accumulator: any, task: any) => {
@@ -157,11 +163,18 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
     // nothing to do
   }
 
-  getPackageStorage(packageInfo: string): any {
-    return new GoogleCloudStorageHandler(packageInfo, this.data.storage, this.data.datastore, this.helper, this.config, this.logger);
+  public getPackageStorage(packageInfo: string): IPackageStorageManager {
+    const {
+      data: { storage, datastore },
+      helper,
+      config,
+      logger
+    } = this;
+
+    return new GoogleCloudStorageHandler(packageInfo, storage, datastore, helper, config, logger);
   }
 
-  _createEmptyDatabase(): GoogleDataStorage {
+  private _createEmptyDatabase(): GoogleDataStorage {
     const options = this._getGoogleOptions(this.config);
     const datastore = new Datastore(options);
     const storage = new Storage(options);

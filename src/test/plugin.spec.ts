@@ -14,13 +14,13 @@ import { Logger, ILocalData, ILocalPackageManager, Callback, Package } from '@ve
 type ITestLocalData = ILocalData<VerdaccioConfigGoogleStorage>;
 
 const logger: Logger = {
-  error: e => {},
-  info: e => {},
-  debug: e => {},
-  child: e => {},
-  warn: e => {},
-  http: e => {},
-  trace: e => {}
+  error: jest.fn(),
+  info: jest.fn(),
+  debug: jest.fn(),
+  child: jest.fn(),
+  warn: jest.fn(),
+  http: jest.fn(),
+  trace: jest.fn()
 };
 
 describe('Google Cloud Storage', () => {
@@ -56,10 +56,10 @@ describe('Google Cloud Storage', () => {
 
     describe('DataStore basic calls', () => {
       const pkgName = 'dataBasicItem1';
-      const deleteItem = (name: any, done: any) => {
+      const deleteItem = (name: string, done: any) => {
         const cloudDatabase = new GoogleCloudDatabase(storageConfig, { logger });
         /* eslint-disable */
-        cloudDatabase.remove(name, (err: any, result: any) => {
+        cloudDatabase.remove(name, (err: Error, result: any) => {
           /* eslint-disable */
           expect(result).not.toBeNull();
           done();
