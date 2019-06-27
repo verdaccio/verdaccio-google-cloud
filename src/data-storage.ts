@@ -1,24 +1,25 @@
 import { Storage } from '@google-cloud/storage';
 import Datastore from '@google-cloud/datastore';
-
+import { getServiceUnavailable } from '@verdaccio/commons-api';
 import GoogleCloudStorageHandler from './storage';
 import StorageHelper from './storage-helper';
-import { Logger, Callback, IPluginStorage } from '@verdaccio/types';
+import { Logger, Callback, IPluginStorage, Token, TokenFilter } from '@verdaccio/types';
 import { VerdaccioConfigGoogleStorage, GoogleCloudOptions, GoogleDataStorage } from './types';
+import { CommitResult } from '@google-cloud/datastore/request';
 
 class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage> {
-  helper: any;
-  path: string | undefined;
-  logger: Logger;
-  data: GoogleDataStorage;
-  locked: boolean | undefined;
-  config: VerdaccioConfigGoogleStorage;
-  kind: string;
-  bucketName: string;
-  keyFilename: string | undefined;
-  GOOGLE_OPTIONS: GoogleCloudOptions | undefined;
+  private helper: any;
+  private path: string | undefined;
+  public logger: Logger;
+  private data: GoogleDataStorage;
+  private locked: boolean | undefined;
+  public config: VerdaccioConfigGoogleStorage;
+  private kind: string;
+  private bucketName: string;
+  private keyFilename: string | undefined;
+  private GOOGLE_OPTIONS: GoogleCloudOptions | undefined;
 
-  constructor(config: VerdaccioConfigGoogleStorage, options: any) {
+  public constructor(config: VerdaccioConfigGoogleStorage, options: any) {
     if (!config) {
       throw new Error('google cloud storage missing config. Add `store.google-cloud` to your config file');
     }
@@ -36,7 +37,7 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
     this.helper = new StorageHelper(this.data.datastore, this.data.storage);
   }
 
-  _getGoogleOptions(config: VerdaccioConfigGoogleStorage): GoogleCloudOptions {
+  private _getGoogleOptions(config: VerdaccioConfigGoogleStorage): GoogleCloudOptions {
     const GOOGLE_OPTIONS: GoogleCloudOptions = {};
 
     if (!config.projectId || typeof config.projectId !== 'string') {
@@ -56,16 +57,28 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
     return GOOGLE_OPTIONS;
   }
 
-  search(onPackage: Callback, onEnd: Callback, validateName: any): void {
+  public search(onPackage: Callback, onEnd: Callback, validateName: any): void {
     onEnd();
   }
 
-  getSecret(): Promise<any> {
+  public saveToken(token: Token): Promise<any> {
+    return Promise.reject(getServiceUnavailable('[saveToken] method not implemented'));
+  }
+
+  public deleteToken(user: string, tokenKey: string): Promise<any> {
+    return Promise.reject(getServiceUnavailable('[deleteToken] method not implemented'));
+  }
+
+  public readTokens(filter: TokenFilter): Promise<Token[]> {
+    return Promise.reject(getServiceUnavailable('[readTokens] method not implemented'));
+  }
+
+  public getSecret(): Promise<any> {
     const key = this.data.datastore.key(['Secret', 'secret']);
     return this.data.datastore.get(key).then((results: any) => results[0] && results[0].secret);
   }
 
-  setSecret(secret: string): Promise<any> {
+  public setSecret(secret: string): Promise<any> {
     const key = this.data.datastore.key(['Secret', 'secret']);
     const entity = {
       key,
@@ -74,7 +87,7 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
     return this.data.datastore.upsert(entity);
   }
 
-  add(name: string, cb: Callback): void {
+  public add(name: string, cb: Callback): void {
     const datastore = this.data.datastore;
     const key = datastore.key([this.kind, name]);
     const data = {
@@ -91,7 +104,7 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
       });
   }
 
-  async _deleteItem(name: string, item: any) {
+  public async _deleteItem(name: string, item: any): Promise<CommitResult | Error> {
     try {
       const datastore = this.data.datastore;
       const key = datastore.key([this.kind, datastore.int(item.id)]);
@@ -102,7 +115,7 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
     }
   }
 
-  remove(name: string, cb: Callback): void {
+  public remove(name: string, cb: Callback): void {
     const deletedItems: any = [];
     const sanityCheck = (deletedItems: any) => {
       if (typeof deletedItems === 'undefined' || deletedItems.length === 0 || deletedItems[0][0].indexUpdates === 0) {
