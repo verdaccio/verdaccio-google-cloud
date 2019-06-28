@@ -1,12 +1,12 @@
-import Datastore from '@google-cloud/datastore';
+import { Datastore, Query } from '@google-cloud/datastore';
 import { Bucket, File, Storage } from '@google-cloud/storage';
-import { Query, QueryResult } from '@google-cloud/datastore/query';
 import { VerdaccioConfigGoogleStorage } from './types';
+import { RunQueryResponse } from '@google-cloud/datastore/build/src/query';
 
 export interface IStorageHelper {
   datastore: Datastore;
   createQuery(key: string, valueQuery: string): Query;
-  runQuery(query: Query): Promise<QueryResult>;
+  runQuery(query: Query): Promise<RunQueryResponse>;
   getEntities(key: string): Promise<Entity[]>;
   getBucket(): Bucket;
   buildFilePath(name: string, fileName: string): File;
@@ -40,7 +40,7 @@ export default class StorageHelper implements IStorageHelper {
     return this.storage.bucket(this.config.bucket);
   }
 
-  public async runQuery(query: Query): Promise<QueryResult> {
+  public async runQuery(query: Query): Promise<RunQueryResponse> {
     // https://cloud.google.com/datastore/docs/reference/data/rest/v1/projects/runQuery
     const result = await this.datastore.runQuery(query);
 
@@ -89,7 +89,7 @@ export default class StorageHelper implements IStorageHelper {
   public async getEntities(key: string): Promise<Entity[]> {
     const datastore = this.datastore;
     const query = datastore.createQuery(key);
-    const dataQuery: QueryResult = await datastore.runQuery(query);
+    const dataQuery: RunQueryResponse = await datastore.runQuery(query);
     const response: object[] = dataQuery[0];
 
     const data = response.reduce((accumulator: Entity[], task: any): Entity[] => {

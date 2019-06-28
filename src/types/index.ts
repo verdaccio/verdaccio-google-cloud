@@ -1,4 +1,4 @@
-import Datastore from '@google-cloud/datastore';
+import { Datastore } from '@google-cloud/datastore';
 import { Config } from '@verdaccio/types';
 
 export interface VerdaccioConfigGoogleStorage extends Config {
@@ -17,11 +17,6 @@ export interface VerdaccioConfigGoogleStorage extends Config {
 }
 
 export type GoogleValidation = boolean | string;
-
-export interface GoogleCloudOptions {
-  projectId?: string;
-  keyFilename?: string;
-}
 
 export interface GoogleDataStorage {
   secret: string;

@@ -2,7 +2,7 @@
 
 module.exports = {
   name: 'verdaccio-google-cloud-jest',
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
+  moduleDirectories: ['node_modules', 'src'],
   transform: {
     '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest'
   },

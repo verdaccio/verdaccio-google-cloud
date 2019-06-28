@@ -4,7 +4,7 @@
   "description": "verdaccio storage plugin implementation for google cloud",
   "main": "lib/index.js",
   "scripts": {
-    "test": " jest --config ./jest.config.js --maxWorkers 2",
+    "test": " jest --config ./jest.config.js",
     "format": "prettier --single-quote --trailing-comma none --write \"{src,types,test}/**/*.{ts}\"",
     "lint": "npm run type-check && eslint . --ext .js,.ts",
     "type-check": "tsc --noEmit",
@@ -18,7 +18,9 @@
   "keywords": [
     "verdaccio",
     "verdaccio-plugin",
-    "google-cloud"
+    "google-cloud",
+    "datastore",
+    "storage"
   ],
   "repository": {
     "type": "git",
@@ -27,7 +29,7 @@
   "author": "Juan Picado <juanpicado19@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "@google-cloud/datastore": "2.0.0",
+    "@google-cloud/datastore": "4.1.3",
     "@google-cloud/storage": "2.5.0",
     "@verdaccio/commons-api": "^0.1.0",
     "@verdaccio/streams": "2.0.0"
@@ -36,9 +38,9 @@
     "@commitlint/cli": "8.0.0",
     "@commitlint/config-conventional": "8.0.0",
     "@commitlint/travis-cli": "8.0.0",
-    "@types/google-cloud__datastore": "1.3.3",
     "@types/http-errors": "1.6.1",
     "@types/jest": "24.0.15",
+    "@types/lodash": "4.14.135",
     "@types/node": "12.0.10",
     "@verdaccio/babel-preset": "0.2.1",
     "@verdaccio/eslint-config": "0.0.1",
@@ -50,7 +52,6 @@
     "jest": "24.8.0",
     "lint-staged": "8.2.1",
     "memory-fs": "0.4.1",
-    "rmdir-sync": "1.0.1",
     "standard-version": "6.0.1",
     "typescript": "3.5.2"
   },
@@ -72,7 +73,7 @@
     ]
   },
   "lint-staged": {
-    "*.{js, json}": [
+    "*.{ts, json}": [
       "eslint .",
       "prettier --write",
       "git add"
