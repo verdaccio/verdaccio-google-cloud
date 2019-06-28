@@ -3,8 +3,9 @@ import { Package, Callback, Logger, IPackageStorageManager } from '@verdaccio/ty
 import { VerdaccioConfigGoogleStorage } from './types';
 import { Bucket, File, DownloadResponse } from '@google-cloud/storage';
 import StorageHelper from './storage-helper';
-import { VerdaccioError, getInternalError, getBadRequest, getNotFound, getConflict } from '@verdaccio/commons-api';
+import { VerdaccioError, getInternalError, getBadRequest, getNotFound, getConflict, HTTP_STATUS } from '@verdaccio/commons-api';
 import { Response } from 'request';
+import { Readable } from 'stream';
 
 export const noSuchFile = 'ENOENT';
 export const fileExist = 'EEXISTS';
@@ -97,11 +98,11 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
     const file = this._getBucket().file(`${this.name}`);
     this.logger.debug({ name: file.name }, 'gcloud: removing the package @{name} from storage');
     file.delete().then(
-      () => {
+      (): void => {
         this.logger.debug({ name: file.name }, 'gcloud: package @{name} was deleted successfully from storage');
         callback(null);
       },
-      (err: any) => {
+      (err: Error): void => {
         this.logger.error({ name: file.name, err: err.message }, 'gcloud: delete @{name} package has failed err: @{err}');
         callback(getInternalError(err.message));
       }
@@ -166,21 +167,25 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
     );
   }
 
-  private _convertToString(value: any): string {
+  private _convertToString(value: Package): string {
     return JSON.stringify(value, null, '\t');
   }
 
   public readPackage(name: string, cb: Function): void {
     this.logger.debug({ name }, 'gcloud: reading package for @{name}');
     this._readPackage(name)
-      .then(json => {
-        this.logger.debug({ name }, 'gcloud: package @{name} was fetched from storage');
-        cb(null, json);
-      })
-      .catch(err => {
-        this.logger.debug({ name: name, err: err.message }, 'gcloud: read package @{name} has failed err: @{err}');
-        cb(err);
-      });
+      .then(
+        (json: Package): void => {
+          this.logger.debug({ name }, 'gcloud: package @{name} was fetched from storage');
+          cb(null, json);
+        }
+      )
+      .catch(
+        (err: Error): void => {
+          this.logger.debug({ name: name, err: err.message }, 'gcloud: read package @{name} has failed err: @{err}');
+          cb(err);
+        }
+      );
   }
 
   private _buildFilePath(name: string, fileName: string): File {
@@ -230,7 +235,7 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
 
     try {
       this._fileExist(this.name, name).then(
-        exist => {
+        (exist: boolean): void => {
           if (exist) {
             this.logger.debug({ url: this.name }, 'gcloud:  @{url} package already exist on storage');
             uploadStream.emit('error', packageAlreadyExist(name));
@@ -240,16 +245,22 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
             const fileStream = file.createWriteStream({
               validation: this.config.validation || defaultValidation
             });
-            uploadStream.done = () => {
-              uploadStream.on('end', () => {
-                fileStream.on('response', () => {
-                  this.logger.debug({ url: file.name }, 'gcloud: @{url} has been successfully uploaded to the storage');
-                  uploadStream.emit('success');
-                });
-              });
+            uploadStream.done = (): void => {
+              uploadStream.on(
+                'end',
+                (): void => {
+                  fileStream.on(
+                    'response',
+                    (): void => {
+                      this.logger.debug({ url: file.name }, 'gcloud: @{url} has been successfully uploaded to the storage');
+                      uploadStream.emit('success');
+                    }
+                  );
+                }
+              );
             };
 
-            fileStream._destroy = function(err) {
+            fileStream._destroy = function(err: Error): void {
               // this is an error when user is not authenticated
               // [BadRequestError: Could not authenticate request
               //  getaddrinfo ENOTFOUND www.googleapis.com www.googleapis.com:443]
@@ -259,18 +270,24 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
               }
             };
 
-            fileStream.on('open', () => {
-              this.logger.debug({ url: file.name }, 'gcloud: upload streem has been opened for @{url}');
-              uploadStream.emit('open');
-            });
+            fileStream.on(
+              'open',
+              (): void => {
+                this.logger.debug({ url: file.name }, 'gcloud: upload streem has been opened for @{url}');
+                uploadStream.emit('open');
+              }
+            );
 
-            fileStream.on('error', (err: any) => {
-              this.logger.error({ url: file.name }, 'gcloud: upload stream has failed for @{url}');
-              fileStream.end();
-              uploadStream.emit('error', getBadRequest(err.message));
-            });
+            fileStream.on(
+              'error',
+              (err: Error): void => {
+                this.logger.error({ url: file.name }, 'gcloud: upload stream has failed for @{url}');
+                fileStream.end();
+                uploadStream.emit('error', getBadRequest(err.message));
+              }
+            );
 
-            uploadStream.abort = () => {
+            uploadStream.abort = (): void => {
               this.logger.warn({ url: file.name }, 'gcloud: upload stream has been aborted for @{url}');
               fileStream.destroy(undefined);
             };
@@ -279,7 +296,7 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
             uploadStream.emit('open');
           }
         },
-        err => {
+        (err: Error): void => {
           uploadStream.emit('error', getInternalError(err.message));
         }
       );
@@ -291,43 +308,49 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
 
   public readTarball(name: string): ReadTarball {
     const readTarballStream: ReadTarball = new ReadTarball({});
-    const file = this._getBucket().file(`${this.name}/${name}`);
-    const fileStream = file.createReadStream();
+    const file: File = this._getBucket().file(`${this.name}/${name}`);
+    const fileStream: Readable = file.createReadStream();
     this.logger.debug({ url: file.name }, 'gcloud: reading tarball from @{url}');
 
-    readTarballStream.abort = function() {
+    readTarballStream.abort = function abortReadTarballCallback(): void {
       fileStream.destroy(undefined);
     };
 
     fileStream
-      .on('error', (err: any) => {
-        if (err.code === 404) {
-          this.logger.debug({ url: file.name }, 'gcloud: tarball @{url} do not found on storage');
-          readTarballStream.emit('error', getNotFound());
-        } else {
-          this.logger.error({ url: file.name }, 'gcloud: tarball @{url} has failed to be retrieved from storage');
-          readTarballStream.emit('error', getBadRequest(err.message));
-        }
-      })
-      .on('response', response => {
-        const size = response.headers['content-length'];
-        const { statusCode } = response;
-        if (statusCode !== 404) {
-          if (size) {
-            readTarballStream.emit('open');
+      .on(
+        'error',
+        (err: VerdaccioError): void => {
+          if (err.code === HTTP_STATUS.NOT_FOUND) {
+            this.logger.debug({ url: file.name }, 'gcloud: tarball @{url} do not found on storage');
+            readTarballStream.emit('error', getNotFound());
+          } else {
+            this.logger.error({ url: file.name }, 'gcloud: tarball @{url} has failed to be retrieved from storage');
+            readTarballStream.emit('error', getBadRequest(err.message));
           }
+        }
+      )
+      .on(
+        'response',
+        (response): void => {
+          const size = response.headers['content-length'];
+          const { statusCode } = response;
+          if (statusCode !== 404) {
+            if (size) {
+              readTarballStream.emit('open');
+            }
 
-          if (parseInt(size, 10) === 0) {
-            this.logger.error({ url: file.name }, 'gcloud: tarball @{url} was fetched from storage and it is empty');
-            readTarballStream.emit('error', getInternalError('file content empty'));
-          } else if (parseInt(size, 10) > 0 && statusCode === 200) {
-            readTarballStream.emit('content-length', response.headers['content-length']);
+            if (parseInt(size, 10) === 0) {
+              this.logger.error({ url: file.name }, 'gcloud: tarball @{url} was fetched from storage and it is empty');
+              readTarballStream.emit('error', getInternalError('file content empty'));
+            } else if (parseInt(size, 10) > 0 && statusCode === 200) {
+              readTarballStream.emit('content-length', response.headers['content-length']);
+            }
+          } else {
+            this.logger.debug({ url: file.name }, 'gcloud: tarball @{url} do not found on storage');
+            readTarballStream.emit('error', getNotFound());
           }
-        } else {
-          this.logger.debug({ url: file.name }, 'gcloud: tarball @{url} do not found on storage');
-          readTarballStream.emit('error', getNotFound());
         }
-      })
+      )
       .pipe(readTarballStream);
     return readTarballStream;
   }

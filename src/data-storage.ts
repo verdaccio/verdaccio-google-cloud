@@ -150,13 +150,15 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
 
   public get(cb: Callback): void {
     const query = this.helper.datastore.createQuery(this.kind);
-    this.helper.runQuery(query).then((data: any) => {
-      const names = data[0].reduce((accumulator: any, task: any) => {
-        accumulator.push(task.name);
-        return accumulator;
-      }, []);
-      cb(null, names);
-    });
+    this.helper.runQuery(query).then(
+      (data: any): void => {
+        const names = data[0].reduce((accumulator: any, task: any): void => {
+          accumulator.push(task.name);
+          return accumulator;
+        }, []);
+        cb(null, names);
+      }
+    );
   }
 
   sync() {
