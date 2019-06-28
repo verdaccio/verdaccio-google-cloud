@@ -108,7 +108,7 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
     );
   }
 
-  public createPackage(name: string, metadata: Object, cb: Function): void {
+  public createPackage(name: string, metadata: Package, cb: Function): void {
     this.logger.debug({ name }, 'gcloud: creating new package for @{name}');
     this._fileExist(name, pkgFileName).then(
       (exist: boolean): void => {
@@ -127,7 +127,7 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
     );
   }
 
-  public savePackage(name: string, value: Object, cb: Function): void {
+  public savePackage(name: string, value: Package, cb: Function): void {
     this.logger.debug({ name }, 'gcloud: saving package for @{name}');
     this._savePackage(name, value)
       .then(
@@ -144,24 +144,26 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
       );
   }
 
-  private _savePackage(name: string, metadata: Object): Promise<any> {
-    return new Promise(async (resolve, reject) => {
-      const file = this._buildFilePath(name, pkgFileName);
-      try {
-        await file.save(this._convertToString(metadata), {
-          validation: this.config.validation || defaultValidation,
-          /**
-           * When resumable is `undefined` - it will default to `true`as per GC Storage documentation:
-           * `Resumable uploads are automatically enabled and must be shut off explicitly by setting options.resumable to false`
-           * @see https://cloud.google.com/nodejs/docs/reference/storage/2.5.x/File#createWriteStream
-           */
-          resumable: this.config.resumable
-        });
-        resolve(null);
-      } catch (err) {
-        reject(getInternalError(err.message));
+  private _savePackage(name: string, metadata: Package): Promise<null | VerdaccioError> {
+    return new Promise(
+      async (resolve, reject): Promise<void> => {
+        const file = this._buildFilePath(name, pkgFileName);
+        try {
+          await file.save(this._convertToString(metadata), {
+            validation: this.config.validation || defaultValidation,
+            /**
+             * When resumable is `undefined` - it will default to `true`as per GC Storage documentation:
+             * `Resumable uploads are automatically enabled and must be shut off explicitly by setting options.resumable to false`
+             * @see https://cloud.google.com/nodejs/docs/reference/storage/2.5.x/File#createWriteStream
+             */
+            resumable: this.config.resumable
+          });
+          resolve(null);
+        } catch (err) {
+          reject(getInternalError(err.message));
+        }
       }
-    });
+    );
   }
 
   private _convertToString(value: any): string {
