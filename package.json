@@ -4,7 +4,6 @@
   "description": "verdaccio storage plugin implementation for google cloud",
   "main": "lib/index.js",
   "scripts": {
-    "pretest": "yarn lint",
     "test": " jest --config ./jest.config.js --maxWorkers 2",
     "format": "prettier --single-quote --trailing-comma none --write \"{src,types,test}/**/*.{ts}\"",
     "lint": "npm run type-check && eslint . --ext .js,.ts",
@@ -12,7 +11,7 @@
     "type-check:watch": "npm run type-check -- --watch",
     "prepublish": "npm run build",
     "commitmsg": "commitlint -e $GIT_PARAMS",
-    "build": "babel src/ --out-dir lib/ --copy-files --ignore ___tests___",
+    "build": "babel src/ --out-dir lib/ --copy-files --extensions \".ts,.tsx\"",
     "coverage:publish": "codecov",
     "release": "standard-version -a -s"
   },

@@ -1,18 +1,14 @@
 import { UploadTarball, ReadTarball } from '@verdaccio/streams';
 import { Package, Callback, Logger, IPackageStorageManager } from '@verdaccio/types';
 import { VerdaccioConfigGoogleStorage } from './types';
-import { Bucket, File, DownloadResponse } from '@google-cloud/storage';
-import StorageHelper from './storage-helper';
+import { File, DownloadResponse } from '@google-cloud/storage';
+import { IStorageHelper } from './storage-helper';
 import { VerdaccioError, getInternalError, getBadRequest, getNotFound, getConflict, HTTP_STATUS } from '@verdaccio/commons-api';
 import { Response } from 'request';
 import { Readable } from 'stream';
 
-export const noSuchFile = 'ENOENT';
-export const fileExist = 'EEXISTS';
 export const pkgFileName = 'package.json';
 export const defaultValidation = 'crc32c';
-
-declare type StorageType = Package | void;
 
 const packageAlreadyExist = function(name: string): VerdaccioError {
   return getConflict(`${name} package already exist`);
@@ -22,13 +18,11 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
   public config: VerdaccioConfigGoogleStorage;
   public logger: Logger;
   private key: string;
-  private helper: StorageHelper;
+  private helper: IStorageHelper;
   private name: string;
-  private storage: any;
 
-  public constructor(name: string, storage: any, datastore: any, helper: any, config: VerdaccioConfigGoogleStorage, logger: Logger) {
+  public constructor(name: string, helper: IStorageHelper, config: VerdaccioConfigGoogleStorage, logger: Logger) {
     this.name = name;
-    this.storage = storage;
     this.logger = logger;
     this.helper = helper;
     this.config = config;
@@ -69,7 +63,7 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
   }
 
   public deletePackage(fileName: string, cb: Callback): void {
-    const file = this._buildFilePath(this.name, fileName);
+    const file = this.helper.buildFilePath(this.name, fileName);
     this.logger.debug({ name: file.name }, 'gcloud: deleting @{name} from storage');
     try {
       file
@@ -95,7 +89,7 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
 
   public removePackage(callback: Callback): void {
     // remove all files from storage
-    const file = this._getBucket().file(`${this.name}`);
+    const file = this.helper.getBucket().file(`${this.name}`);
     this.logger.debug({ name: file.name }, 'gcloud: removing the package @{name} from storage');
     file.delete().then(
       (): void => {
@@ -148,7 +142,7 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
   private _savePackage(name: string, metadata: Package): Promise<null | VerdaccioError> {
     return new Promise(
       async (resolve, reject): Promise<void> => {
-        const file = this._buildFilePath(name, pkgFileName);
+        const file = this.helper.buildFilePath(name, pkgFileName);
         try {
           await file.save(this._convertToString(metadata), {
             validation: this.config.validation || defaultValidation,
@@ -188,14 +182,10 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
       );
   }
 
-  private _buildFilePath(name: string, fileName: string): File {
-    return this._getBucket().file(`${name}/${fileName}`);
-  }
-
   private _fileExist(name: string, fileName: string): Promise<boolean> {
     return new Promise(
       async (resolve, reject): Promise<void> => {
-        const file: File = this._buildFilePath(name, fileName);
+        const file: File = this.helper.buildFilePath(name, fileName);
         try {
           const data = await file.exists();
           const exist = data[0];
@@ -214,7 +204,7 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
   private async _readPackage(name: string): Promise<Package> {
     return new Promise(
       async (resolve, reject): Promise<void> => {
-        const file = this._buildFilePath(name, pkgFileName);
+        const file = this.helper.buildFilePath(name, pkgFileName);
 
         try {
           const content: DownloadResponse = await file.download();
@@ -240,7 +230,7 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
             this.logger.debug({ url: this.name }, 'gcloud:  @{url} package already exist on storage');
             uploadStream.emit('error', packageAlreadyExist(name));
           } else {
-            const file = this._getBucket().file(`${this.name}/${name}`);
+            const file = this.helper.getBucket().file(`${this.name}/${name}`);
             this.logger.info({ url: file.name }, 'gcloud: the @{url} is being uploaded to the storage');
             const fileStream = file.createWriteStream({
               validation: this.config.validation || defaultValidation
@@ -308,7 +298,7 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
 
   public readTarball(name: string): ReadTarball {
     const readTarballStream: ReadTarball = new ReadTarball({});
-    const file: File = this._getBucket().file(`${this.name}/${name}`);
+    const file: File = this.helper.getBucket().file(`${this.name}/${name}`);
     const fileStream: Readable = file.createReadStream();
     this.logger.debug({ url: file.name }, 'gcloud: reading tarball from @{url}');
 
@@ -334,7 +324,7 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
         (response): void => {
           const size = response.headers['content-length'];
           const { statusCode } = response;
-          if (statusCode !== 404) {
+          if (statusCode !== HTTP_STATUS.NOT_FOUND) {
             if (size) {
               readTarballStream.emit('open');
             }
@@ -342,7 +332,7 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
             if (parseInt(size, 10) === 0) {
               this.logger.error({ url: file.name }, 'gcloud: tarball @{url} was fetched from storage and it is empty');
               readTarballStream.emit('error', getInternalError('file content empty'));
-            } else if (parseInt(size, 10) > 0 && statusCode === 200) {
+            } else if (parseInt(size, 10) > 0 && statusCode === HTTP_STATUS.OK) {
               readTarballStream.emit('content-length', response.headers['content-length']);
             }
           } else {
@@ -353,10 +343,6 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
       )
       .pipe(readTarballStream);
     return readTarballStream;
-  }
-
-  private _getBucket(): Bucket {
-    return this.storage.bucket(this.config.bucket);
   }
 }
 

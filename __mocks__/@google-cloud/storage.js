@@ -1,4 +1,5 @@
 import MemoryFileSystem from 'memory-fs';
+import { API_ERROR } from '@verdaccio/commons-api';
 
 const fs = new MemoryFileSystem();
 
@@ -49,7 +50,7 @@ class File {
   }
   delete() {
     if (this.exist === false) {
-      const e = new Error('no such package ENOENT');
+      const e = new Error(API_ERROR.NO_PACKAGE);
 
       return Promise.reject(e);
     }
