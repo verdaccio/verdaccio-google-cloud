@@ -111,7 +111,7 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
   public createPackage(name: string, metadata: Object, cb: Function): void {
     this.logger.debug({ name }, 'gcloud: creating new package for @{name}');
     this._fileExist(name, pkgFileName).then(
-      exist => {
+      (exist: boolean): void => {
         if (exist) {
           this.logger.debug({ name }, 'gcloud: creating @{name} has failed, it already exist');
           cb(packageAlreadyExist(name));
@@ -120,7 +120,7 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
           this.savePackage(name, metadata, cb);
         }
       },
-      err => {
+      (err: Error): void => {
         this.logger.error({ name: name, err: err.message }, 'gcloud: create package @{name} has failed err: @{err}');
         cb(getInternalError(err.message));
       }
@@ -130,14 +130,18 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
   public savePackage(name: string, value: Object, cb: Function): void {
     this.logger.debug({ name }, 'gcloud: saving package for @{name}');
     this._savePackage(name, value)
-      .then(() => {
-        this.logger.debug({ name }, 'gcloud: @{name} has been saved successfully on storage');
-        cb(null);
-      })
-      .catch(err => {
-        this.logger.error({ name: name, err: err.message }, 'gcloud: save package @{name} has failed err: @{err}');
-        return cb(err);
-      });
+      .then(
+        (): void => {
+          this.logger.debug({ name }, 'gcloud: @{name} has been saved successfully on storage');
+          cb(null);
+        }
+      )
+      .catch(
+        (err: Error): void => {
+          this.logger.error({ name: name, err: err.message }, 'gcloud: save package @{name} has failed err: @{err}');
+          return cb(err);
+        }
+      );
   }
 
   private _savePackage(name: string, metadata: Object): Promise<any> {
