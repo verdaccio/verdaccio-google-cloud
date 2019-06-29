@@ -85,12 +85,40 @@ describe('Google Cloud Storage', () => {
         return deleteItem(pkgName, done);
       });
 
-      test.skip('should create an Entity', done => {
+      test('should create an Entity', done => {
         // ** add, remove, get, getPackageStorage
+        jest.doMock('../src/storage-helper', () => {
+          const originalModule = jest.requireActual('../src/storage-helper').default;
+
+          return {
+            __esModule: true,
+            default: class Foo extends originalModule {
+              datastore: any;
+              constructor(props) {
+                super(props);
+                this.datastore = {
+                  key: jest.fn(),
+                  save: keyData => Promise.resolve([]),
+                  createQuery: () => 'query',
+                  runQuery: () =>
+                    Promise.resolve([
+                      [
+                        {
+                          name: pkgName
+                        }
+                      ],
+                      {}
+                    ])
+                };
+              }
+            }
+          };
+        });
 
         const cloudDatabase = getCloudDatabase(storageConfig);
         cloudDatabase.add(pkgName, (err: VerdaccioError) => {
           expect(err).toBeNull();
+
           cloudDatabase.get((err: VerdaccioError, results: any) => {
             expect(results).not.toBeNull();
             expect(err).toBeNull();
