@@ -147,7 +147,7 @@ describe('Google Cloud Storage', () => {
       });
 
       test('should remove an entire package', done => {
-        //FIXME: relocate this test
+        // FIXME: relocate this test
         const cloudDatabase = getCloudDatabase(storageConfig);
         const store = cloudDatabase.getPackageStorage(pkgExample.name);
         expect(store).not.toBeNull();
@@ -162,7 +162,7 @@ describe('Google Cloud Storage', () => {
     });
 
     describe.skip('GoogleCloudStorageHandler:read', () => {
-      const packageName: string = 'readPkgTest';
+      const packageName = 'readPkgTest';
       const pkg = generatePackage(packageName);
       const cloudDatabase: ITestLocalData = getCloudDatabase(storageConfig);
 
@@ -203,7 +203,7 @@ describe('Google Cloud Storage', () => {
 
     describe.skip('GoogleCloudStorageHandler:update', () => {
       const cloudDatabase: ITestLocalData = getCloudDatabase(storageConfig);
-      const packageName: string = 'updateTransPkg';
+      const packageName = 'updateTransPkg';
       beforeAll(done => {
         createPackage(cloudDatabase, packageName, done);
       });

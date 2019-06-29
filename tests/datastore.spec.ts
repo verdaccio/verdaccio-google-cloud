@@ -5,8 +5,9 @@ import { VerdaccioConfigGoogleStorage } from '../src/types';
 import { Logger, ILocalPackageManager } from '@verdaccio/types';
 import { VerdaccioError } from '@verdaccio/commons-api';
 import { ERROR_MISSING_CONFIG } from '../src/data-storage';
+import { HTTP_STATUS } from '@verdaccio/commons-api/lib';
 
-const logger: Logger = {
+const loggerDefault: Logger = {
   error: jest.fn(),
   info: jest.fn(),
   debug: jest.fn(),
@@ -22,7 +23,7 @@ describe('Google Cloud Storage', () => {
     jest.resetModules();
   });
 
-  const getCloudDatabase = storageConfig => {
+  const getCloudDatabase = (storageConfig, logger = loggerDefault) => {
     const GoogleCloudDatabase = require('../src/index').default;
     const cloudDatabase = new GoogleCloudDatabase(storageConfig, { logger });
 
@@ -67,7 +68,7 @@ describe('Google Cloud Storage', () => {
     describe('DataStore basic calls', () => {
       const pkgName = 'dataBasicItem1';
 
-      test('should create an Entity', done => {
+      test('should add an Entity', done => {
         // ** add, remove, get, getPackageStorage
         jest.doMock('../src/storage-helper', () => {
           const originalModule = jest.requireActual('../src/storage-helper').default;
@@ -108,6 +109,44 @@ describe('Google Cloud Storage', () => {
             expect(results[0]).toBe(pkgName);
             done();
           });
+        });
+      });
+
+      test('should fails add an Entity', done => {
+        // ** add, remove, get, getPackageStorage
+        jest.doMock('../src/storage-helper', () => {
+          const originalModule = jest.requireActual('../src/storage-helper').default;
+
+          return {
+            __esModule: true,
+            default: class Foo extends originalModule {
+              datastore: any;
+              constructor(props) {
+                super(props);
+                this.datastore = {
+                  key: jest.fn(),
+                  save: _keyData => Promise.reject(new Error('')),
+                  createQuery: () => 'query',
+                  runQuery: () =>
+                    Promise.resolve([
+                      [
+                        {
+                          name: pkgName
+                        }
+                      ],
+                      {}
+                    ])
+                };
+              }
+            }
+          };
+        });
+
+        const cloudDatabase = getCloudDatabase(storageConfig);
+        cloudDatabase.add(pkgName, (err: VerdaccioError) => {
+          expect(err).not.toBeNull();
+          expect(err.code).toEqual(HTTP_STATUS.INTERNAL_ERROR);
+          done();
         });
       });
 
@@ -174,6 +213,50 @@ describe('Google Cloud Storage', () => {
       });
     });
 
-    // FIXME: missing, getSecret, setSecret
+    describe('should test non implemented methods', () => {
+      test('should test saveToken', done => {
+        const warn = jest.fn();
+        const cloudDatabase = getCloudDatabase(storageConfig, { ...loggerDefault, warn });
+        cloudDatabase.saveToken({}).catch(() => {
+          expect(warn).toHaveBeenCalled();
+          done();
+        });
+      });
+
+      test('should test deleteToken', done => {
+        const warn = jest.fn();
+        const cloudDatabase = getCloudDatabase(storageConfig, { ...loggerDefault, warn });
+        cloudDatabase.deleteToken({}).catch(() => {
+          expect(warn).toHaveBeenCalled();
+          done();
+        });
+      });
+
+      test('should test readTokens', done => {
+        const warn = jest.fn();
+        const cloudDatabase = getCloudDatabase(storageConfig, { ...loggerDefault, warn });
+        cloudDatabase.readTokens({}).catch(() => {
+          expect(warn).toHaveBeenCalled();
+          done();
+        });
+      });
+
+      test('should test search', done => {
+        const warn = jest.fn();
+        const cloudDatabase = getCloudDatabase(storageConfig, { ...loggerDefault, warn });
+        cloudDatabase.search(null, () => {
+          expect(warn).toHaveBeenCalled();
+          done();
+        });
+      });
+
+      test('should test sync', done => {
+        const warn = jest.fn();
+        const cloudDatabase = getCloudDatabase(storageConfig, { ...loggerDefault, warn });
+        cloudDatabase.sync();
+        expect(warn).toHaveBeenCalled();
+        done();
+      });
+    });
   });
 });
