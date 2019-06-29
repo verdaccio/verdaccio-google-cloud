@@ -1,5 +1,4 @@
 import fs from 'fs';
-import _ from 'lodash';
 import path from 'path';
 import { pkgFileName } from '../src/storage';
 import storageConfig from './partials/config';
@@ -8,7 +7,7 @@ import { generatePackage } from './partials/utils.helpers';
 
 import { VerdaccioConfigGoogleStorage } from '../src/types';
 
-import { Logger, ILocalData, ILocalPackageManager, Callback, Package } from '@verdaccio/types';
+import { Logger, ILocalData, Callback, Package } from '@verdaccio/types';
 import { HTTP_STATUS, API_ERROR, VerdaccioError } from '@verdaccio/commons-api';
 
 type ITestLocalData = ILocalData<VerdaccioConfigGoogleStorage>;
@@ -35,128 +34,6 @@ describe('Google Cloud Storage', () => {
 
     return cloudDatabase;
   };
-
-  describe('Google Cloud DataStore', () => {
-    // **** DataStore
-
-    describe('should test create instances', () => {
-      test('should create an instance properly', () => {
-        const cloudDatabase = getCloudDatabase(storageConfig);
-
-        expect(cloudDatabase).toBeDefined();
-      });
-
-      test('should create an instance fails bucket name invalid', () => {
-        expect(() => {
-          const testConf: VerdaccioConfigGoogleStorage = _.clone(storageConfig);
-          delete testConf.bucket;
-
-          getCloudDatabase(testConf);
-        }).toThrow(new Error('Google Cloud Storage requires a bucket name, please define one.'));
-      });
-
-      test('should create an instance fails projectId invalid', () => {
-        expect(() => {
-          const testConf: VerdaccioConfigGoogleStorage = _.clone(storageConfig);
-          delete testConf.projectId;
-
-          getCloudDatabase(testConf);
-        }).toThrow(new Error('Google Cloud Storage requires a ProjectId.'));
-      });
-    });
-
-    describe('DataStore basic calls', () => {
-      const pkgName = 'dataBasicItem1';
-      const deleteItem = (name: string, done: any) => {
-        const cloudDatabase = getCloudDatabase(storageConfig);
-        /* eslint-disable */
-        cloudDatabase.remove(name, (err: Error, result: any) => {
-          /* eslint-disable */
-          expect(result).not.toBeNull();
-          done();
-        });
-      };
-
-      beforeAll(done => {
-        return deleteItem(pkgName, done);
-      });
-
-      afterAll(done => {
-        return deleteItem(pkgName, done);
-      });
-
-      test('should create an Entity', done => {
-        // ** add, remove, get, getPackageStorage
-        jest.doMock('../src/storage-helper', () => {
-          const originalModule = jest.requireActual('../src/storage-helper').default;
-
-          return {
-            __esModule: true,
-            default: class Foo extends originalModule {
-              datastore: any;
-              constructor(props) {
-                super(props);
-                this.datastore = {
-                  key: jest.fn(),
-                  save: keyData => Promise.resolve([]),
-                  createQuery: () => 'query',
-                  runQuery: () =>
-                    Promise.resolve([
-                      [
-                        {
-                          name: pkgName
-                        }
-                      ],
-                      {}
-                    ])
-                };
-              }
-            }
-          };
-        });
-
-        const cloudDatabase = getCloudDatabase(storageConfig);
-        cloudDatabase.add(pkgName, (err: VerdaccioError) => {
-          expect(err).toBeNull();
-
-          cloudDatabase.get((err: VerdaccioError, results: any) => {
-            expect(results).not.toBeNull();
-            expect(err).toBeNull();
-            expect(results).toHaveLength(1);
-            expect(results[0]).toBe(pkgName);
-            done();
-          });
-        });
-      });
-
-      // test('should delete an entity', () => {
-      //   const cloudDatabase: ILocalData = new GoogleCloudDatabase(storageConfig, { logger });
-      //
-      //   cloudDatabase.remove(pkgExample.name, (err, result) => {
-      //     expect(err).toBeNull();
-      //     expect(result).not.toBeNull();
-      //   });
-      // });
-      //
-      // test('should fails on delete remove an entity', () => {
-      //   const cloudDatabase: ILocalData = new GoogleCloudDatabase(storageConfig, { logger });
-      //
-      //   cloudDatabase.remove('fakeName', err => {
-      //     expect(err).not.toBeNull();
-      //     expect(err.message).toMatch(/not found/);
-      //   });
-      // });
-
-      test('should get a new instance package storage', () => {
-        const cloudDatabase = getCloudDatabase(storageConfig);
-        const store: ILocalPackageManager = cloudDatabase.getPackageStorage('newInstance');
-        expect(store).not.toBeNull();
-        expect(store).toBeDefined();
-      });
-    });
-
-    // FIXME: missing, getSecret, setSecret
-  });
 
   // storage test
 
@@ -187,7 +64,7 @@ describe('Google Cloud Storage', () => {
     };
 
     describe.skip('GoogleCloudStorageHandler:create', () => {
-      const pkgName: string = 'createPkg1';
+      const pkgName = 'createPkg1';
 
       test('should create a package', (done: jest.DoneCallback) => {
         const pkg = generatePackage(pkgName);
@@ -223,7 +100,7 @@ describe('Google Cloud Storage', () => {
       });
 
       describe('GoogleCloudStorageHandler:save', () => {
-        const pkgName: string = 'savePkg1';
+        const pkgName = 'savePkg1';
         test('should save a package', done => {
           const pkg = generatePackage(pkgName);
 
@@ -242,16 +119,8 @@ describe('Google Cloud Storage', () => {
     });
 
     describe.skip('GoogleCloudStorageHandler:delete', () => {
-      const pkgName: string = 'deletePkg1';
+      const pkgName = 'deletePkg1';
       const cloudDatabase: ITestLocalData = getCloudDatabase(storageConfig);
-
-      beforeAll(done => {
-        createPackage(cloudDatabase, pkgName, done);
-      });
-
-      afterAll(done => {
-        deletePackage(cloudDatabase, pkgName, done);
-      });
 
       test('should delete an instance', done => {
         const store = cloudDatabase.getPackageStorage(pkgName);

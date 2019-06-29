@@ -8,5 +8,5 @@ module.exports = {
   },
   verbose: true,
   collectCoverage: true,
-  coveragePathIgnorePatterns: ['node_modules', 'fixtures', 'lib']
+  coveragePathIgnorePatterns: ['node_modules', 'partials', 'lib']
 };

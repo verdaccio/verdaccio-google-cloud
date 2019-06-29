@@ -10,6 +10,8 @@ import { RunQueryResponse } from '@google-cloud/datastore/build/src/query';
 import { entity } from '@google-cloud/datastore/build/src/entity';
 type Key = entity.Key;
 
+export const ERROR_MISSING_CONFIG = 'google cloud storage missing config. Add `store.google-cloud` to your config file';
+
 class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage> {
   private helper: IStorageHelper;
   public logger: Logger;
@@ -21,7 +23,7 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
 
   public constructor(config: VerdaccioConfigGoogleStorage, options: any) {
     if (!config) {
-      throw new Error('google cloud storage missing config. Add `store.google-cloud` to your config file');
+      throw new Error(ERROR_MISSING_CONFIG);
     }
 
     this.config = config;
