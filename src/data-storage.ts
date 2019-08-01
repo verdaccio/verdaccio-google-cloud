@@ -53,7 +53,7 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
 
     if (keyFileName) {
       GOOGLE_OPTIONS.keyFilename = keyFileName;
-      this.logger.warn('Using credentials in a file might be un-secure and is recommended for local development');
+      this.logger.warn('Using credentials in a file might be un-secure and is only recommended for local development');
     }
 
     this.logger.warn({ content: JSON.stringify(GOOGLE_OPTIONS) }, 'Google storage settings: @{content}');
@@ -89,11 +89,16 @@ class GoogleCloudDatabase implements IPluginStorage<VerdaccioConfigGoogleStorage
     this.logger.debug('gcloud: [datastore getSecret] init');
 
     return this.helper.datastore.get(key).then(
+      // @ts-ignore
       (data: object): string => {
         this.logger.trace({ data }, 'gcloud: [datastore getSecret] response @{data}');
         const entities = data[0];
-
-        return entities[0].secret;
+        if (!entities) {
+          // @ts-ignore
+          return null;
+        }
+        // "{\"secret\":\"181bc38698078f880564be1e4d7ec107ac8a3b344a924c6d86cea4a84a885ae0\"}"
+        return entities.secret;
       }
     );
   }

@@ -4,11 +4,14 @@ import { pkgFileName } from '../src/storage';
 import storageConfig from './partials/config';
 import pkgExample from './partials/pkg';
 import { generatePackage } from './partials/utils.helpers';
+import { IPackageStorageManager } from '@verdaccio/types';
 
 import { VerdaccioConfigGoogleStorage } from '../src/types';
 
-import { Logger, ILocalData, Callback, Package } from '@verdaccio/types';
+import { Logger, ILocalData, Callback, Package, IPackageStorage } from '@verdaccio/types';
 import { HTTP_STATUS, API_ERROR, VerdaccioError } from '@verdaccio/commons-api';
+import { DownloadResponse } from '@google-cloud/storage';
+import { Writable } from 'stream';
 
 type ITestLocalData = ILocalData<VerdaccioConfigGoogleStorage>;
 
@@ -20,6 +23,38 @@ const logger: Logger = {
   warn: jest.fn(),
   http: jest.fn(),
   trace: jest.fn()
+};
+
+const FileMocked = class {
+  name: string;
+  exist: boolean;
+  constructor(fileName, exist) {
+    this.name = fileName;
+    this.exist = exist;
+  }
+  save() {
+    return Promise.resolve();
+  }
+  exists(): Promise<any> {
+    return Promise.resolve([this.exist]);
+  }
+  download(): Promise<DownloadResponse> {
+    return Promise.resolve([Buffer.from(JSON.stringify({ name: 'foo' }))]);
+  }
+};
+
+const Bucket: any = class {
+  name: string;
+  exists: boolean;
+  FiledMocked: any;
+  constructor(bucketName, exists = false, File = FileMocked) {
+    this.name = bucketName;
+    this.exists = exists;
+    this.FiledMocked = File;
+  }
+  file(fileName) {
+    return new this.FiledMocked(fileName, this.exists);
+  }
 };
 
 describe('Google Cloud Storage', () => {
@@ -39,48 +74,69 @@ describe('Google Cloud Storage', () => {
 
   describe('Google Cloud Storage', () => {
     const createPackage = (cloudDatabase: ITestLocalData, name: string, done: jest.DoneCallback) => {
-      // const pkg = generatePackage(name);
-      // const store = cloudDatabase.getPackageStorage(pkg.name);
-      // expect(store).not.toBeNull();
-      // if (store) {
-      //   store.createPackage(pkg.name, pkg, (err: VerdaccioError) => {
-      //     expect(err).toBeNull();
-      //     expect(pkg.name).toBe(pkg.name);
-      //     done();
-      //   });
-      // }
       done();
     };
     const deletePackage = (cloudDatabase: ITestLocalData, name: string, done: jest.DoneCallback) => {
-      // const store = cloudDatabase.getPackageStorage(name);
-      // expect(store).not.toBeNull();
-      // if (store) {
-      //   // here we set package.json, name should be taken from class level
-      //   store.deletePackage(pkgFileName, () => {
-      //     done();
-      //   });
-      // }
       done();
     };
 
-    describe.skip('GoogleCloudStorageHandler:create', () => {
+    describe('GoogleCloudStorageHandler:create', () => {
       const pkgName = 'createPkg1';
 
       test('should create a package', (done: jest.DoneCallback) => {
+        jest.doMock('../src/storage-helper', () => {
+          const originalModule = jest.requireActual('../src/storage-helper').default;
+          return {
+            __esModule: true,
+            default: class Foo extends originalModule {
+              storage: any;
+              config: any;
+              constructor(props) {
+                super(props);
+                this.config = {
+                  bucket: 'foo'
+                };
+                this.storage = {
+                  bucket: name => new Bucket(name, false)
+                };
+              }
+            }
+          };
+        });
+
         const pkg = generatePackage(pkgName);
         const cloudDatabase: ITestLocalData = getCloudDatabase(storageConfig);
-        const store = cloudDatabase.getPackageStorage(pkgName);
+        const store: IPackageStorage = cloudDatabase.getPackageStorage(pkgName) as IPackageStorageManager;
         expect(store).not.toBeNull();
-        if (store) {
-          store.createPackage(pkgName, pkg, (err: VerdaccioError) => {
-            expect(err).toBeNull();
-            expect(pkg.name).toBe(pkgName);
-            done();
-          });
-        }
+
+        store.createPackage(pkgName, pkg, (err: VerdaccioError) => {
+          expect(err).toBeNull();
+          expect(pkg.name).toBe(pkgName);
+          done();
+        });
       });
 
       test('should fails on package already exist', done => {
+        jest.doMock('../src/storage-helper', () => {
+          const originalModule = jest.requireActual('../src/storage-helper').default;
+          return {
+            __esModule: true,
+            default: class Foo extends originalModule {
+              storage: any;
+              config: any;
+              constructor(props) {
+                super(props);
+                this.config = {
+                  bucket: 'foo'
+                };
+                this.storage = {
+                  bucket: name => new Bucket(name, true)
+                };
+              }
+            }
+          };
+        });
+
         const pkg = generatePackage(pkgName);
 
         const cloudDatabase: ITestLocalData = getCloudDatabase(storageConfig);
@@ -97,6 +153,48 @@ describe('Google Cloud Storage', () => {
             });
           });
         }
+      });
+
+      test('should fails on package unexpected error', done => {
+        const FileMockedFailure = class {
+          exists(): Promise<any> {
+            return Promise.reject(new Error(API_ERROR.UNKNOWN_ERROR));
+          }
+        };
+
+        jest.doMock('../src/storage-helper', () => {
+          const originalModule = jest.requireActual('../src/storage-helper').default;
+          return {
+            __esModule: true,
+            default: class Foo extends originalModule {
+              storage: any;
+              config: any;
+              constructor(props) {
+                super(props);
+                this.config = {
+                  bucket: 'foo'
+                };
+                this.storage = {
+                  bucket: name => new Bucket(name, true, FileMockedFailure)
+                };
+              }
+            }
+          };
+        });
+
+        const pkg = generatePackage(pkgName);
+
+        const cloudDatabase: ITestLocalData = getCloudDatabase(storageConfig);
+        const store: IPackageStorage = cloudDatabase.getPackageStorage(pkgName) as IPackageStorageManager;
+        store.createPackage(pkgName, pkg, (err: VerdaccioError) => {
+          expect(err).not.toBeNull();
+          store.createPackage(pkgName, pkg, (err: VerdaccioError) => {
+            expect(err).not.toBeNull();
+            expect(err.code).toEqual(HTTP_STATUS.INTERNAL_ERROR);
+            expect(err.message).toEqual(API_ERROR.UNKNOWN_ERROR);
+            done();
+          });
+        });
       });
 
       describe('GoogleCloudStorageHandler:save', () => {
@@ -295,31 +393,87 @@ describe('Google Cloud Storage', () => {
       });
     });
 
-    describe.skip('GoogleCloudStorageHandler:: writeFile', () => {
+    describe('GoogleCloudStorageHandler:: writeFile', () => {
+      const MemoryFileSystem = require('memory-fs');
+      const memfs = new MemoryFileSystem();
       const tarballFile = path.join(__dirname, '/partials/test-pkg/', 'test-pkg-1.0.0.tgz');
+      const FileWriteMocked = class {
+        name: string;
+        exist: boolean;
+        constructor(fileName, exist) {
+          this.name = fileName;
+          this.exist = exist;
+        }
+        save() {
+          return Promise.resolve();
+        }
+        exists(): Promise<any> {
+          return Promise.resolve([this.exist]);
+        }
+        createWriteStream(): Writable {
+          const stream = memfs.createWriteStream(`/test`);
+          // process.nextTick(function() {
+          stream.on('end', () => {
+            stream.emit('response');
+          });
+          stream.on('data', d => {
+            console.log('data-->', d);
+          });
+          stream.on('response', d => {
+            console.log('response-->', d);
+          });
+          stream.on('close', () => {
+            stream.emit('response');
+          });
+          // });
+
+          return stream;
+        }
+      };
 
       test('should write a tarball successfully push data', done => {
+        jest.doMock('../src/storage-helper', () => {
+          const originalModule = jest.requireActual('../src/storage-helper').default;
+          return {
+            __esModule: true,
+            default: class Foo extends originalModule {
+              storage: any;
+              config: any;
+              constructor(props) {
+                super(props);
+                this.config = {
+                  bucket: 'foo'
+                };
+                this.storage = {
+                  bucket: name => new Bucket(name, false, FileWriteMocked)
+                };
+              }
+            }
+          };
+        });
+
         const bufferFile = fs.readFileSync(tarballFile);
         const cloudDatabase: ITestLocalData = getCloudDatabase(storageConfig);
-        const store = cloudDatabase.getPackageStorage(pkgExample.name);
-        expect(store).not.toBeNull();
-        if (store) {
-          const writeTarballStream = store.writeTarball('test-pkg-1.0.0.tgz');
+        const store: IPackageStorage = cloudDatabase.getPackageStorage(pkgExample.name) as IPackageStorageManager;
+        const writeTarballStream = store.writeTarball('test-pkg-1.0.0.tgz');
 
-          writeTarballStream.on('error', (err: VerdaccioError) => {
-            done.fail(err);
-          });
+        writeTarballStream.on('error', (err: VerdaccioError) => {
+          done.fail(err);
+        });
 
-          writeTarballStream.on('success', () => {
-            done();
-          });
+        writeTarballStream.on('success', () => {
+          done();
+        });
 
-          writeTarballStream.end(bufferFile);
-          writeTarballStream.done();
-        }
+        writeTarballStream.on('end', () => {
+          done();
+        });
+
+        writeTarballStream.end(bufferFile);
+        writeTarballStream.done();
       });
 
-      test('should write a abort successfully push data', done => {
+      test.skip('should write a abort successfully push data', done => {
         const bufferFile = fs.readFileSync(tarballFile);
         const cloudDatabase: ITestLocalData = getCloudDatabase(storageConfig);
         const store = cloudDatabase.getPackageStorage(pkgExample.name);

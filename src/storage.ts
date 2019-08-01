@@ -297,25 +297,25 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
   }
 
   public readTarball(name: string): ReadTarball {
-    const readTarballStream: ReadTarball = new ReadTarball({});
+    const localReadStream: ReadTarball = new ReadTarball({});
     const file: File = this.helper.getBucket().file(`${this.name}/${name}`);
-    const fileStream: Readable = file.createReadStream();
+    const bucketStream: Readable = file.createReadStream();
     this.logger.debug({ url: file.name }, 'gcloud: reading tarball from @{url}');
 
-    readTarballStream.abort = function abortReadTarballCallback(): void {
-      fileStream.destroy(undefined);
+    localReadStream.abort = function abortReadTarballCallback(): void {
+      bucketStream.destroy(undefined);
     };
 
-    fileStream
+    bucketStream
       .on(
         'error',
         (err: VerdaccioError): void => {
           if (err.code === HTTP_STATUS.NOT_FOUND) {
             this.logger.debug({ url: file.name }, 'gcloud: tarball @{url} do not found on storage');
-            readTarballStream.emit('error', getNotFound());
+            localReadStream.emit('error', getNotFound());
           } else {
             this.logger.error({ url: file.name }, 'gcloud: tarball @{url} has failed to be retrieved from storage');
-            readTarballStream.emit('error', getBadRequest(err.message));
+            localReadStream.emit('error', getBadRequest(err.message));
           }
         }
       )
@@ -326,23 +326,23 @@ class GoogleCloudStorageHandler implements IPackageStorageManager {
           const { statusCode } = response;
           if (statusCode !== HTTP_STATUS.NOT_FOUND) {
             if (size) {
-              readTarballStream.emit('open');
+              localReadStream.emit('open');
             }
 
             if (parseInt(size, 10) === 0) {
               this.logger.error({ url: file.name }, 'gcloud: tarball @{url} was fetched from storage and it is empty');
-              readTarballStream.emit('error', getInternalError('file content empty'));
+              localReadStream.emit('error', getInternalError('file content empty'));
             } else if (parseInt(size, 10) > 0 && statusCode === HTTP_STATUS.OK) {
-              readTarballStream.emit('content-length', response.headers['content-length']);
+              localReadStream.emit('content-length', response.headers['content-length']);
             }
           } else {
             this.logger.debug({ url: file.name }, 'gcloud: tarball @{url} do not found on storage');
-            readTarballStream.emit('error', getNotFound());
+            localReadStream.emit('error', getNotFound());
           }
         }
       )
-      .pipe(readTarballStream);
-    return readTarballStream;
+      .pipe(localReadStream);
+    return localReadStream;
   }
 }
 
