@@ -1,3 +1,7 @@
+## Deprecated repository
+
+**This repository has been moved to a monorepo you can find in [verdaccio/monorepo](https://github.com/verdaccio/monorepo). This package is located in [`plugins/google-cloud` folder](https://github.com/verdaccio/monorepo/tree/master/plugins/google-cloud)**
+
 # verdaccio-google-cloud
 [![npm](https://img.shields.io/npm/v/verdaccio-google-cloud.svg)](https://www.npmjs.com/package/verdaccio-google-cloud)
 [![CircleCI](https://circleci.com/gh/verdaccio/verdaccio-google-cloud.svg?style=svg)](https://circleci.com/gh/verdaccio/verdaccio-google-cloud)
