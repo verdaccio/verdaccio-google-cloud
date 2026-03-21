@@ -1,2 +1,37 @@
+# Source
 src/
+types/
+
+# Tests
+tests/
+coverage/
+vitest.config.ts
+
+# Build & config
 tsconfig.json
+vite.config.ts
+eslint.config.mjs
+.prettierrc
+.prettierignore
+.editorconfig
+.nvmrc
+renovate.json
+
+# CI/CD
+.changeset/
+.github/
+
+# Docker
+Dockerfile
+docker-compose.yaml
+
+# Docs & examples
+examples/
+conf/
+LOCAL_DEV.md
+
+# Lock files
+pnpm-lock.yaml
+
+# Misc
+.DS_Store
