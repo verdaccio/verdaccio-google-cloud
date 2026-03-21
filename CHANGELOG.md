@@ -1,5 +1,11 @@
 # Changelog
 
+## 11.1.0
+
+### Minor Changes
+
+- 1e0d2e6: feat: ignore files
+
 ## 11.0.0
 
 ### Major Changes
