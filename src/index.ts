@@ -1,5 +1,6 @@
-import DataStorage from './data-storage';
+import GoogleCloudDatabase from './data-storage';
+import GoogleCloudStorageHandler from './storage';
 
-export { DataStorage };
+export {GoogleCloudDatabase, GoogleCloudStorageHandler};
 
-export default DataStorage;
+export default GoogleCloudDatabase;

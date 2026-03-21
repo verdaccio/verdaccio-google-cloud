@@ -1,82 +1,216 @@
-## Deprecated repository
-
-**This repository has been moved to a monorepo you can find in [verdaccio/monorepo](https://github.com/verdaccio/monorepo). This package is located in [`plugins/google-cloud` folder](https://github.com/verdaccio/monorepo/tree/master/plugins/google-cloud)**
-
 # verdaccio-google-cloud
-[![npm](https://img.shields.io/npm/v/verdaccio-google-cloud.svg)](https://www.npmjs.com/package/verdaccio-google-cloud)
-[![CircleCI](https://circleci.com/gh/verdaccio/verdaccio-google-cloud.svg?style=svg)](https://circleci.com/gh/verdaccio/verdaccio-google-cloud)
-[![codecov](https://codecov.io/gh/verdaccio/verdaccio-google-cloud/branch/master/graph/badge.svg)](https://codecov.io/gh/verdaccio/verdaccio-google-cloud)
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fverdaccio%2Fverdaccio-google-cloud.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fverdaccio%2Fverdaccio-google-cloud?ref=badge_shield)
-[![backers](https://opencollective.com/verdaccio/tiers/backer/badge.svg?label=Backer&color=brightgreen)](https://opencollective.com/verdaccio)
-[![discord](https://img.shields.io/discord/388674437219745793.svg)](http://chat.verdaccio.org/)
-![MIT](https://img.shields.io/github/license/mashape/apistatus.svg)
 
+Google Cloud Storage + Datastore storage plugin for [Verdaccio](https://verdaccio.org).
 
-☁️📦 Google Cloud storage plugin for verdaccio
+Uses **Google Cloud Storage** for package tarballs and metadata, and **Cloud Datastore** for the registry database (package list, secrets, tokens).
 
-⚠️⚠️ This plugin is experimental and might be unstable. It requires further testing. ⚠️⚠️
+Built with Google Cloud SDK for Node.js (`@google-cloud/storage` v7, `@google-cloud/datastore` v10).
 
+## Requirements
+
+- **Node.js** >= 24
+- **Verdaccio** >= 7.x
+- **Google Cloud Storage Bucket** — stores package tarballs and `package.json` metadata
+- **Cloud Datastore** — stores the registry state (package list, secret, auth tokens)
+- **Google Cloud Credentials** — via service account key file, Workload Identity, Application Default Credentials, or environment variables
+
+### IAM Permissions
+
+The plugin requires the following IAM roles or equivalent permissions:
+
+**Cloud Storage:**
+
+- `storage.objects.get`
+- `storage.objects.create`
+- `storage.objects.delete`
+- `storage.objects.list`
+
+**Cloud Datastore:**
+
+- `datastore.entities.get`
+- `datastore.entities.create`
+- `datastore.entities.update`
+- `datastore.entities.delete`
+- `datastore.indexes.list`
+
+Recommended roles: `roles/storage.objectAdmin` (for GCS) and `roles/datastore.user` (for Datastore).
+
+## Installation
+
+```bash
+npm install verdaccio-google-cloud
 ```
-npm i -g verdaccio-google-cloud
-yarn global add verdaccio-google-cloud
-pnpm i -g verdaccio-google-cloud
-```
 
-### Requirements
+## Configuration
 
-* Google Cloud Account
-* Service account with 'Cloud Datastore Owner' role and read/write access to the bucket
-* Verdaccio server (see below)
-
-```
-npm install -g verdaccio@latest
-yarn global add verdaccio@latest
-pnpm -g verdaccio@latest
-```
-
-### Configuration
-
-Complete configuration example:
+Add to your Verdaccio `config.yaml`:
 
 ```yaml
 store:
   google-cloud:
-   ## google project id
-   projectId: project-01 || env (GOOGLE_CLOUD_VERDACCIO_PROJECT_ID)
+    bucket: your-gcs-bucket
+    projectId: your-gcp-project-id # optional if using Application Default Credentials
+    kind: VerdaccioDataStore # optional, Datastore entity kind (default: VerdaccioDataStore)
+    keyFilename: /path/to/service-account.json # optional, for local development
+    validation: crc32c # optional, file validation method (default: crc32c)
+    resumable: true # optional, enable resumable uploads (default: true)
 
-   ## namespace for metadata database
-   kind: someRandonMetadataDatabaseKey
-
-   ## this pluging do not create the bucket, it has to exist
-   bucket: my-bucket-name
-
-   ## google cloud recommend this file only for development
-   ## this field is not mandatory
-   keyFilename: /path/project-01.json || env (GOOGLE_CLOUD_VERDACCIO_KEY)
-
-   ## default validation is, it can be overrided by 
-   ## https://cloud.google.com/nodejs/docs/reference/storage/1.6.x/File.html#createWriteStream
-   # validation: crc32c
-
-   ## Enable/disable resumable uploads to GC Storage
-   ## By default it's enabled in `@google-cloud/storage`
-   ## May cause failures for small package uploads so it is recommended to set it to `false`
-   ## @see https://stackoverflow.com/questions/53172050/google-cloud-storage-invalid-upload-request-error-bad-request
-   resumable: true
+    # Emulator endpoints (optional, for local development)
+    apiEndpoint: http://localhost:5050 # custom GCS endpoint (fake-gcs-server)
+    datastoreEndpoint: http://localhost:8081 # custom Datastore endpoint (emulator)
 ```
 
-Define `env` whether you want load the value from environment variables.
+### Environment variable support
 
-> If you are willing to use some of `env` just **do not define** properties on
-`config.yaml` or let them emtpy. Properties have preceden over `env` variables.
+The plugin supports configuration via environment variables. If you omit a config field, the plugin checks for the corresponding environment variable:
 
-## Disclaimer
+| Config field  | Environment variable                | Description                      |
+| ------------- | ----------------------------------- | -------------------------------- |
+| `projectId`   | `GOOGLE_CLOUD_VERDACCIO_PROJECT_ID` | Google Cloud project ID          |
+| `keyFilename` | `GOOGLE_CLOUD_VERDACCIO_KEY`        | Path to service account key file |
 
-⚠️⚠️ This plugin is experimental and might be unstable. It requires further testing. ⚠️⚠️
+### Environment variables reference
+
+The following environment variables are used by the Docker image and the plugin:
+
+#### Google Cloud Storage
+
+| Variable               | Required | Description                                                              |
+| ---------------------- | -------- | ------------------------------------------------------------------------ |
+| `GCS_BUCKET`           | Yes      | GCS bucket name for storing packages                                     |
+| `GCS_API_ENDPOINT`     | No       | Custom GCS endpoint URL. Required for fake-gcs-server. Omit for real GCP |
+| `GOOGLE_CLOUD_PROJECT` | No       | Google Cloud project ID. Default: from Application Default Credentials   |
+
+#### Cloud Datastore
+
+| Variable                  | Required | Description                                                                            |
+| ------------------------- | -------- | -------------------------------------------------------------------------------------- |
+| `DATASTORE_EMULATOR_HOST` | No       | Datastore emulator host:port. When set, the SDK automatically connects to the emulator |
+| `DATASTORE_ENDPOINT`      | No       | Custom Datastore endpoint URL. Required for the emulator. Omit for real GCP            |
+
+#### Authentication
+
+| Variable                            | Required | Description                                                                        |
+| ----------------------------------- | -------- | ---------------------------------------------------------------------------------- |
+| `GOOGLE_APPLICATION_CREDENTIALS`    | No       | Path to service account key file. Omit to use Workload Identity or metadata server |
+| `GOOGLE_CLOUD_VERDACCIO_PROJECT_ID` | No       | Project ID override for the plugin                                                 |
+| `GOOGLE_CLOUD_VERDACCIO_KEY`        | No       | Key file path override for the plugin                                              |
+
+#### Debug
+
+| Variable | Required | Description                                                                                                      |
+| -------- | -------- | ---------------------------------------------------------------------------------------------------------------- |
+| `DEBUG`  | No       | Enable [debug](https://www.npmjs.com/package/debug) output. Set to `verdaccio:plugin*` for all plugin namespaces |
+
+Available debug namespaces:
+
+- `verdaccio:plugin:google-cloud` — Datastore operations (add, remove, get, tokens, secret)
+- `verdaccio:plugin:google-cloud:storage` — GCS package operations (read, write, create, delete, tarballs)
+
+### Custom storage per package scope
+
+```yaml
+packages:
+  '@scope/*':
+    access: $all
+    publish: $all
+    storage: 'scoped' # stored under scoped/@scope/pkg/
+  '**':
+    access: $all
+    publish: $all
+    proxy: npmjs
+    storage: 'public'
+```
+
+## Architecture
+
+```
+                   +-----------+
+                   | Verdaccio |
+                   +-----+-----+
+                         |
+            +------------+------------+
+            |                         |
+   GoogleCloudDatabase      GoogleCloudStorageHandler
+   (registry state)         (per-package storage)
+            |                         |
+       Datastore              Google Cloud Storage
+   +-----------------+      +------------------+
+   | Secret          |      | pkg/package.json |
+   | VerdaccioData.. |      | pkg/tarball.tgz  |
+   | Token           |      +------------------+
+   +-----------------+
+```
+
+**GoogleCloudDatabase** handles registry operations via Cloud Datastore:
+
+- Package list (`add`, `remove`, `get`)
+- Secret management (`getSecret`, `setSecret`)
+- Auth tokens (`saveToken`, `deleteToken`, `readTokens`)
+- Search (`search`)
+
+**GoogleCloudStorageHandler** handles per-package operations via Google Cloud Storage:
+
+- Package metadata (`readPackage`, `savePackage`, `createPackage`, `deletePackage`)
+- Tarballs (`readTarball`, `writeTarball`)
+
+### Datastore entity schema
+
+The plugin uses the following Datastore entity kinds:
+
+| Kind                 | Key                 | Properties                                    | Description         |
+| -------------------- | ------------------- | --------------------------------------------- | ------------------- |
+| `Secret`             | `secret`            | `secret`                                      | Registry secret key |
+| `VerdaccioDataStore` | `{packageName}`     | `name`                                        | Package entry       |
+| `Token`              | `{user}:{tokenKey}` | `user`, `key`, `token`, `readonly`, `created` | Auth token          |
+
+The entity kind for packages is configurable via the `kind` config option (default: `VerdaccioDataStore`).
+
+### Setting up GCP resources (production)
+
+#### Create a GCS bucket
+
+```bash
+gsutil mb -p your-project-id gs://verdaccio-storage
+```
+
+#### Enable Cloud Datastore
+
+Cloud Datastore is automatically available in any GCP project with Firestore in Datastore mode enabled:
+
+```bash
+gcloud firestore databases create --type=datastore-mode --location=us-east1
+```
+
+#### Terraform
+
+```hcl
+resource "google_storage_bucket" "verdaccio" {
+  name     = "verdaccio-storage"
+  location = "US"
+}
+
+resource "google_project_service" "datastore" {
+  service = "datastore.googleapis.com"
+}
+```
+
+## Development
+
+See [LOCAL_DEV.md](LOCAL_DEV.md) for the full local development guide, including:
+
+- Setup, build, test, and lint commands
+- Running Verdaccio + GCS/Datastore emulators via Docker Compose
+- Inspecting GCS and Datastore data in emulators
+- Debug logging namespaces
+- Helm + emulators example for Kubernetes
+
+## Scaling & Production Deployment
+
+The plugin is fully stateless and supports horizontal scaling. Run multiple Verdaccio instances behind a load balancer — all instances share the same GCS bucket and Datastore database.
+
+- [Helm example](examples/helm/) — deploy on Kubernetes using the official Verdaccio Helm chart with Workload Identity support
 
 ## License
 
-[MIT Licensed](http://www.opensource.org/licenses/mit-license.php)
-
-
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fverdaccio%2Fverdaccio-google-cloud.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fverdaccio%2Fverdaccio-google-cloud?ref=badge_large)
+MIT

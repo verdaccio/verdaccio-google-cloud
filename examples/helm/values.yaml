@@ -1,0 +1,107 @@
+# Verdaccio Helm chart values — local development with GCS/Datastore emulators
+# Chart: https://github.com/verdaccio/charts
+#
+# This example runs Verdaccio with the Google Cloud Storage + Datastore plugin
+# backed by local emulators for fully local development — no GCP account needed.
+#
+# Prerequisites:
+#   1. A Kubernetes cluster (minikube, kind, Docker Desktop, etc.)
+#   2. Helm 3 installed
+#   3. Emulators deployed in the same cluster (see README.md)
+#   4. A Docker image with the plugin pre-installed
+#
+# Quick start:
+#   helm repo add verdaccio https://charts.verdaccio.org
+#   kubectl apply -f emulators.yaml
+#   kubectl apply -f init-resources.yaml
+#   helm install verdaccio verdaccio/verdaccio -f values.yaml
+
+replicaCount: 2
+
+image:
+  # Build from the repo root:
+  #   docker build -t verdaccio-google-cloud:local .
+  # For minikube: eval $(minikube docker-env) before building
+  # For kind: kind load docker-image verdaccio-google-cloud:local
+  repository: verdaccio-google-cloud
+  tag: local
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+
+extraEnvVars:
+  - name: GOOGLE_CLOUD_PROJECT
+    value: verdaccio-test
+  - name: GCS_BUCKET
+    value: verdaccio-storage
+  - name: GCS_API_ENDPOINT
+    value: http://fake-gcs-server.gcp-emulators.svc.cluster.local:5050
+  - name: DATASTORE_EMULATOR_HOST
+    value: datastore-emulator.gcp-emulators.svc.cluster.local:8081
+  - name: DATASTORE_ENDPOINT
+    value: http://datastore-emulator.gcp-emulators.svc.cluster.local:8081
+  - name: DEBUG
+    value: 'verdaccio:plugin*'
+
+configMap: |
+  storage: /verdaccio/storage
+  plugins: /verdaccio/plugins
+
+  store:
+    google-cloud:
+      bucket: GCS_BUCKET
+      projectId: GOOGLE_CLOUD_PROJECT
+      apiEndpoint: GCS_API_ENDPOINT
+      datastoreEndpoint: DATASTORE_ENDPOINT
+
+  uplinks:
+    npmjs:
+      url: https://registry.npmjs.org/
+
+  packages:
+    '@*/*':
+      access: $all
+      publish: $all
+      proxy: npmjs
+    '**':
+      access: $all
+      publish: $all
+      proxy: npmjs
+
+  log:
+    - type: stdout
+      format: pretty
+      level: trace
+
+  listen:
+    - 0.0.0.0:4873
+
+  auth:
+    htpasswd:
+      file: /verdaccio/storage/htpasswd
+
+persistence:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+readinessProbe:
+  httpGet:
+    path: /-/ping
+    port: 4873
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+livenessProbe:
+  httpGet:
+    path: /-/ping
+    port: 4873
+  initialDelaySeconds: 10
+  periodSeconds: 30

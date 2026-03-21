@@ -1,45 +1,27 @@
-import { VerdaccioConfigGoogleStorage } from '../../src/types';
+import type {GoogleCloudConfig} from '../../types';
 
-class Config implements VerdaccioConfigGoogleStorage {
-  projectId: string;
-  keyFilename: string;
-  bucket: string;
-  kind: string;
-  self_path: string;
-  secret: string;
-  user_agent: string;
-  server_id: string;
-  packages: PackageList;
-  uplinks: UpLinksConfList;
-  logs: LoggerConf[];
-  // @ts-ignore
-  security: Security;
-  $key: any;
-  $value: any;
-
-  constructor() {
-    this.self_path = './test';
-    this.secret = '12345';
-    this.uplinks = {
-      npmjs: {
-        url: 'http://never_use:0000/'
-      }
-    };
-    this.server_id = '';
-    this.user_agent = '';
-    this.packages = {};
-    this.logs = [];
-    this.kind = 'partial_test_metadataDatabaseKey';
-    this.bucket = 'verdaccio-plugin';
-    this.projectId = 'verdaccio-01';
-    // this.keyFilename = './verdaccio-01-56f693e3aab0.json';
-  }
+const storageConfig = {
+  self_path: './test',
+  secret: '12345',
+  uplinks: {
+    npmjs: {
+      url: 'http://never_use:0000/',
+    },
+  },
+  server_id: '',
+  user_agent: '',
+  packages: {},
+  logs: [],
+  kind: 'partial_test_metadataDatabaseKey',
+  bucket: 'verdaccio-plugin',
+  projectId: 'verdaccio-01',
+  security: {api: {legacy: true}},
   checkSecretKey(): string {
     return '';
-  }
+  },
   getMatchedPackagesSpec(): void {
     return;
-  }
-}
+  },
+} as unknown as GoogleCloudConfig;
 
-export default new Config();
+export default storageConfig;

@@ -1,0 +1,73 @@
+services:
+  fake-gcs-server:
+    image: fsouza/fake-gcs-server:latest
+    ports:
+      - '5050:5050'
+    command:
+      - '-scheme'
+      - 'http'
+      - '-port'
+      - '5050'
+      - '-public-host'
+      - 'fake-gcs-server:5050'
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:5050/storage/v1/b']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  datastore-emulator:
+    image: google/cloud-sdk:emulators
+    command:
+      - gcloud
+      - beta
+      - emulators
+      - datastore
+      - start
+      - '--host-port=0.0.0.0:8081'
+      - '--project=verdaccio-test'
+      - '--no-store-on-disk'
+    ports:
+      - '8081:8081'
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -sf http://localhost:8081 || exit 0']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  init-resources:
+    image: curlimages/curl:latest
+    depends_on:
+      fake-gcs-server:
+        condition: service_healthy
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        echo "Creating GCS bucket..."
+        curl -sf -X POST \
+          'http://fake-gcs-server:5050/storage/v1/b?project=verdaccio-test' \
+          -H 'Content-Type: application/json' \
+          -d '{"name": "verdaccio-storage"}' || true
+
+        echo "Resources ready."
+
+  verdaccio:
+    build: .
+    depends_on:
+      fake-gcs-server:
+        condition: service_healthy
+      datastore-emulator:
+        condition: service_healthy
+      init-resources:
+        condition: service_completed_successfully
+    environment:
+      - GOOGLE_CLOUD_PROJECT=verdaccio-test
+      - GCS_BUCKET=verdaccio-storage
+      - GCS_API_ENDPOINT=http://fake-gcs-server:5050
+      - DATASTORE_EMULATOR_HOST=datastore-emulator:8081
+      - DATASTORE_ENDPOINT=http://datastore-emulator:8081
+      - DEBUG=verdaccio:plugin*
+    ports:
+      - '4873:4873'

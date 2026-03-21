@@ -1,0 +1,119 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gcp-emulators
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fake-gcs-server
+  namespace: gcp-emulators
+  labels:
+    app: fake-gcs-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fake-gcs-server
+  template:
+    metadata:
+      labels:
+        app: fake-gcs-server
+    spec:
+      containers:
+        - name: fake-gcs-server
+          image: fsouza/fake-gcs-server:latest
+          args:
+            - '-scheme'
+            - 'http'
+            - '-port'
+            - '5050'
+            - '-public-host'
+            - 'fake-gcs-server.gcp-emulators.svc.cluster.local:5050'
+          ports:
+            - containerPort: 5050
+          readinessProbe:
+            httpGet:
+              path: /storage/v1/b
+              port: 5050
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fake-gcs-server
+  namespace: gcp-emulators
+  labels:
+    app: fake-gcs-server
+spec:
+  selector:
+    app: fake-gcs-server
+  ports:
+    - port: 5050
+      targetPort: 5050
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: datastore-emulator
+  namespace: gcp-emulators
+  labels:
+    app: datastore-emulator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: datastore-emulator
+  template:
+    metadata:
+      labels:
+        app: datastore-emulator
+    spec:
+      containers:
+        - name: datastore-emulator
+          image: google/cloud-sdk:emulators
+          command:
+            - gcloud
+            - beta
+            - emulators
+            - datastore
+            - start
+            - '--host-port=0.0.0.0:8081'
+            - '--project=verdaccio-test'
+            - '--no-store-on-disk'
+          ports:
+            - containerPort: 8081
+          readinessProbe:
+            tcpSocket:
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: datastore-emulator
+  namespace: gcp-emulators
+  labels:
+    app: datastore-emulator
+spec:
+  selector:
+    app: datastore-emulator
+  ports:
+    - port: 8081
+      targetPort: 8081

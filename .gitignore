@@ -1,19 +1,5 @@
-npm-debug.log
-.DS_Store
-
-_storage/
-lib/
-node_modules/
+npm-debug.log*
+node_modules
+/lib/
 coverage/
-
-# Istanbul
-.nyc*
-tests-report
-
-# IDE
-.vscode/*
-.idea/
-*.log
-*.tar
-*.gz
-*.tmp-*
+.DS_Store

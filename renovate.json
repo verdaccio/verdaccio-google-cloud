@@ -1,0 +1,75 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "baseBranches": ["master"],
+  "prConcurrentLimit": 1,
+  "prHourlyLimit": 1,
+  "labels": ["dependencies"],
+  "minimumReleaseAge": "60 days",
+  "packageRules": [
+    {
+      "description": "Block @verdaccio/streams and @verdaccio/eslint-config from being updated",
+      "matchPackageNames": ["@verdaccio/streams", "@verdaccio/eslint-config"],
+      "enabled": false
+    },
+    {
+      "description": "Verdaccio packages — update immediately, no age gate",
+      "matchPackagePatterns": ["^@verdaccio/"],
+      "groupName": "verdaccio",
+      "minimumReleaseAge": "0 days",
+      "schedule": ["at any time"],
+      "automerge": false,
+      "prPriority": 10
+    },
+    {
+      "description": "Google Cloud SDK — group and update monthly",
+      "matchPackagePatterns": ["^@google-cloud/"],
+      "groupName": "google-cloud-sdk",
+      "schedule": ["before 6am on the first day of the month"],
+      "automerge": false
+    },
+    {
+      "description": "Build tooling — group and update monthly",
+      "matchPackageNames": [
+        "vite",
+        "vite-plugin-dts",
+        "vitest",
+        "typescript",
+        "eslint",
+        "typescript-eslint",
+        "prettier",
+        "rimraf",
+        "cross-env"
+      ],
+      "groupName": "build-tooling",
+      "schedule": ["before 6am on the first day of the month"],
+      "automerge": false
+    },
+    {
+      "description": "Type definitions — group and update monthly",
+      "matchPackagePatterns": ["^@types/"],
+      "groupName": "type-definitions",
+      "schedule": ["before 6am on the first day of the month"],
+      "automerge": false
+    },
+    {
+      "description": "All other dependencies — monthly",
+      "matchPackagePatterns": ["*"],
+      "excludePackagePatterns": ["^@verdaccio/", "^@google-cloud/", "^@types/"],
+      "excludePackageNames": [
+        "vite",
+        "vite-plugin-dts",
+        "vitest",
+        "typescript",
+        "eslint",
+        "typescript-eslint",
+        "prettier",
+        "rimraf",
+        "cross-env"
+      ],
+      "groupName": "other-dependencies",
+      "schedule": ["before 6am on the first day of the month"],
+      "automerge": false
+    }
+  ]
+}

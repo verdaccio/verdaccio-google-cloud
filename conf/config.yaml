@@ -1,0 +1,34 @@
+storage: /verdaccio/storage
+
+plugins: /verdaccio/plugins
+
+store:
+  google-cloud:
+    bucket: GCS_BUCKET
+    projectId: GOOGLE_CLOUD_PROJECT
+    apiEndpoint: GCS_API_ENDPOINT
+    datastoreEndpoint: DATASTORE_ENDPOINT
+
+uplinks:
+  npmjs:
+    url: https://registry.npmjs.org/
+
+packages:
+  '@*/*':
+    access: $all
+    publish: $all
+    proxy: npmjs
+  '**':
+    access: $all
+    publish: $all
+    proxy: npmjs
+
+log:
+  - {type: stdout, format: pretty, level: trace}
+
+listen:
+  - 0.0.0.0:4873
+
+auth:
+  htpasswd:
+    file: /verdaccio/storage/htpasswd

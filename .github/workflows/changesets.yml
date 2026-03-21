@@ -1,0 +1,48 @@
+name: Changesets
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+  push:
+    branches:
+      - master
+
+env:
+  CI: true
+  PNPM_CACHE_FOLDER: .pnpm-store
+
+jobs:
+  # Update package versions from changesets.
+  version:
+    timeout-minutes: 14
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && github.repository == 'verdaccio/verdaccio-google-cloud'
+    steps:
+      - name: checkout code repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: setup node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
+        with:
+          node-version-file: '.nvmrc'
+      - name: install pnpm
+        run: npm i -g corepack@latest || corepack enable && corepack prepare pnpm@latest --activate
+      - name: install dependencies
+        run: pnpm install
+      - name: create versions
+        uses: changesets/action@master
+        with:
+          version: pnpm ci:version
+          commit: 'build: release packages'
+          title: 'build: release packages'
+          publish: pnpm ci:publish
+          createGithubReleases: true
+          setupGitUser: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.CHANGESET_RELEASE_TOKEN }}
+          NPM_TOKEN: ${{ secrets.REGISTRY_AUTH_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.REGISTRY_AUTH_TOKEN }}
+          NPM_CONFIG_REGISTRY: https://registry.npmjs.org

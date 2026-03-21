@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-gcp-resources
+  namespace: gcp-emulators
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: init
+          image: curlimages/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              GCS_ENDPOINT=http://fake-gcs-server.gcp-emulators.svc.cluster.local:5050
+
+              echo "Waiting for fake-gcs-server..."
+              until curl -sf "$GCS_ENDPOINT/storage/v1/b" > /dev/null 2>&1; do
+                sleep 2
+              done
+              echo "fake-gcs-server ready."
+
+              echo "Creating GCS bucket..."
+              curl -sf -X POST \
+                "$GCS_ENDPOINT/storage/v1/b?project=verdaccio-test" \
+                -H 'Content-Type: application/json' \
+                -d '{"name": "verdaccio-storage"}' || echo "Bucket exists"
+
+              echo "Done."
