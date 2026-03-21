@@ -1,6 +1,6 @@
 {
   "name": "verdaccio-google-cloud",
-  "version": "10.2.1",
+  "version": "11.0.0",
   "description": "Google Cloud Storage plugin for Verdaccio",
   "type": "module",
   "main": "./lib/index.js",
