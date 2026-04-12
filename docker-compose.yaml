@@ -71,3 +71,9 @@ services:
       - DEBUG=verdaccio:plugin*
     ports:
       - '4873:4873'
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:4873/-/ping']
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 10s
