@@ -1,10 +1,10 @@
 import type {File} from '@google-cloud/storage';
 import debugCore from 'debug';
+import {PassThrough} from 'stream';
 import type {Readable} from 'stream';
 
 import {errorUtils} from '@verdaccio/core';
 import type {VerdaccioError} from '@verdaccio/core';
-import {ReadTarball, UploadTarball} from '@verdaccio/streams';
 import type {Callback, Logger, Package} from '@verdaccio/types';
 
 import type {GoogleCloudConfig} from '../types';
@@ -235,8 +235,13 @@ export default class GoogleCloudStorageHandler {
     }
   }
 
-  public writeTarball(name: string): UploadTarball {
-    const uploadStream: UploadTarball = new UploadTarball({});
+  public writeTarball(name: string): PassThrough & {abort?: () => void; done?: () => void} {
+    const uploadStream: PassThrough & {abort?: () => void; done?: () => void} = new PassThrough();
+
+    let streamEnded = 0;
+    uploadStream.on('end', () => {
+      streamEnded = 1;
+    });
 
     try {
       this._fileExist(this.name, name).then(
@@ -256,7 +261,7 @@ export default class GoogleCloudStorageHandler {
               validation: this.config.validation || defaultValidation,
             });
             uploadStream.done = (): void => {
-              uploadStream.on('end', (): void => {
+              const onEnd = (): void => {
                 fileStream.on('response', (): void => {
                   debug('writeTarball name=%o success', file.name);
                   this.logger.trace(
@@ -265,7 +270,12 @@ export default class GoogleCloudStorageHandler {
                   );
                   uploadStream.emit('success');
                 });
-              });
+              };
+              if (streamEnded) {
+                onEnd();
+              } else {
+                uploadStream.on('end', onEnd);
+              }
             };
 
             fileStream._destroy = function (err: Error): void {
@@ -312,8 +322,8 @@ export default class GoogleCloudStorageHandler {
     return uploadStream;
   }
 
-  public readTarball(name: string): ReadTarball {
-    const localReadStream: ReadTarball = new ReadTarball({});
+  public readTarball(name: string): PassThrough & {abort?: () => void} {
+    const localReadStream: PassThrough & {abort?: () => void} = new PassThrough();
     const file: File = this.helper.getBucket().file(`${this.name}/${name}`);
     const bucketStream: Readable = file.createReadStream();
     debug('readTarball name=%o', file.name);

@@ -6,7 +6,7 @@ export default defineConfig({
     environment: 'node',
     server: {
       deps: {
-        inline: ['@verdaccio/core', '@verdaccio/streams'],
+        inline: ['@verdaccio/core'],
       },
     },
     coverage: {
