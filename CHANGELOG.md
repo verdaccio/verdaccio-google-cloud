@@ -1,5 +1,11 @@
 # Changelog
 
+## 11.1.1
+
+### Patch Changes
+
+- 66013ba: fix: build package before publishing so `lib/` is included in the published tarball
+
 ## 11.1.0
 
 ### Minor Changes
