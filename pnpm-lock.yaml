@@ -52,8 +52,8 @@ importers:
         specifier: 1.0.0-next-9.10
         version: 1.0.0-next-9.10(typanion@3.14.0)
       '@verdaccio/types':
-        specifier: 13.0.0-next-8.12
-        version: 13.0.0-next-8.12
+        specifier: 13.0.0
+        version: 13.0.0
       cross-env:
         specifier: ^7.0.3
         version: 7.0.3
@@ -829,8 +829,8 @@ packages:
     resolution: {integrity: sha512-MpsLvCHUycbJO53XbwU/MMOtqP8NwSp6eelokRL9BhS/BAxDKf+qOBCzuMKLB2VA8rsfN/DsFz0L/Xk4eu8Vvw==}
     engines: {node: '>=14', npm: '>=6'}
 
-  '@verdaccio/types@13.0.0-next-8.12':
-    resolution: {integrity: sha512-li020wGFKFXgO1yHhz2q5Nf6MRD/81UyNabRTaMVzaLm0dlRTHk5Mpr90alMlIU3IfiOkmBW3zmFYLzFg4M6hQ==}
+  '@verdaccio/types@13.0.0':
+    resolution: {integrity: sha512-7ZGA1iA5rHQ+kljPXkxPUJiImCKdnRIGAy2ZxCsxdP59YTNcW1F+CZbB8mhMEZknHTd0jaIaJEj+f0WjZ0GdMA==}
     engines: {node: '>=18'}
 
   '@vitest/eslint-plugin@1.6.12':
@@ -3933,7 +3933,7 @@ snapshots:
 
   '@verdaccio/streams@11.0.0-6-next.5': {}
 
-  '@verdaccio/types@13.0.0-next-8.12': {}
+  '@verdaccio/types@13.0.0': {}
 
   '@vitest/eslint-plugin@1.6.12(eslint@10.0.2)(typescript@5.9.3)(vitest@4.1.0(@types/node@25.5.0)(vite@8.0.1(@types/node@25.5.0)))':
     dependencies:
