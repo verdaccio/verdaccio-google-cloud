@@ -8,9 +8,15 @@ on:
     branches:
       - master
 
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
 env:
   CI: true
   PNPM_CACHE_FOLDER: .pnpm-store
+  NPM_CONFIG_PROVENANCE: 'true'
 
 jobs:
   # Update package versions from changesets.
@@ -42,9 +48,7 @@ jobs:
           title: 'build: release packages'
           publish: pnpm ci:publish
           createGithubReleases: true
-          setupGitUser: false
+          setupGitUser: true
         env:
           GITHUB_TOKEN: ${{ secrets.CHANGESET_RELEASE_TOKEN }}
-          NPM_TOKEN: ${{ secrets.REGISTRY_AUTH_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.REGISTRY_AUTH_TOKEN }}
           NPM_CONFIG_REGISTRY: https://registry.npmjs.org
