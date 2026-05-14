@@ -1,0 +1,9 @@
+allowBuilds:
+  esbuild: true
+  protobufjs: false
+  unrs-resolver: true
+minimumReleaseAge: 10080
+minimumReleaseAgeExclude:
+  - '@verdaccio/*'
+  - '@verdaccio-scope/*'
+  - 'verdaccio-*'

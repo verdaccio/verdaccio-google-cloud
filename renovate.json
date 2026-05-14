@@ -6,6 +6,7 @@
   "prHourlyLimit": 1,
   "labels": ["dependencies"],
   "minimumReleaseAge": "60 days",
+  "pinVersions": true,
   "packageRules": [
     {
       "description": "Block @verdaccio/streams and @verdaccio/eslint-config from being updated",

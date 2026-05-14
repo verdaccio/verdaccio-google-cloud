@@ -35,7 +35,10 @@ jobs:
         with:
           node-version-file: '.nvmrc'
       - name: install pnpm
-        run: npm i -g corepack@latest || corepack enable && corepack prepare pnpm@latest --activate
+        run: |
+          npm install --global corepack@latest
+          corepack enable
+          corepack install
       - name: install dependencies
         run: pnpm install
       - name: build
