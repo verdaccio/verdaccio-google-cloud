@@ -9,7 +9,7 @@ Built with Google Cloud SDK for Node.js (`@google-cloud/storage` v7, `@google-cl
 ## Requirements
 
 - **Node.js** >= 24
-- **Verdaccio** >= 7.x
+- **Verdaccio** >= latest
 - **Google Cloud Storage Bucket** — stores package tarballs and `package.json` metadata
 - **Cloud Datastore** — stores the registry state (package list, secret, auth tokens)
 - **Google Cloud Credentials** — via service account key file, Workload Identity, Application Default Credentials, or environment variables
