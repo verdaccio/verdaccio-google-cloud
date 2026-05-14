@@ -1,5 +1,11 @@
 # Changelog
 
+## 11.1.2
+
+### Patch Changes
+
+- 31d5809: chore: release bump
+
 ## 11.1.1
 
 ### Patch Changes
