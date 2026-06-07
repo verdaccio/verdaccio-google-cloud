@@ -19,11 +19,14 @@ env:
   NPM_CONFIG_PROVENANCE: 'true'
 
 jobs:
-  # Update package versions from changesets.
+  # Open/refresh the "build: release packages" version PR from changesets.
+  # Runs freely on every push/cron (no environment gate, no publish).
   version:
     timeout-minutes: 14
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master' && github.repository == 'verdaccio/verdaccio-google-cloud'
+    outputs:
+      hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
     steps:
       - name: checkout code repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -44,11 +47,47 @@ jobs:
       - name: build
         run: pnpm build
       - name: create versions
+        id: changesets
         uses: changesets/action@63a615b9cd06ba9a3e6d13796c7fbcb080a60a0b
         with:
           version: pnpm ci:version
           commit: 'build: release packages'
           title: 'build: release packages'
+          setupGitUser: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.CHANGESET_RELEASE_TOKEN }}
+
+  # Publish to npm once the version PR has been merged (no changesets left).
+  # Gated by the `npm` environment, which requires manual approval.
+  # Skipped on the daily cron so it never nags when there is nothing to publish.
+  publish:
+    needs: version
+    if: needs.version.outputs.hasChangesets == 'false' && github.event_name != 'schedule'
+    timeout-minutes: 14
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - name: checkout code repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+
+      - name: setup node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6
+        with:
+          node-version-file: '.nvmrc'
+      - name: install pnpm
+        run: |
+          npm install --global corepack@latest
+          corepack enable
+          corepack install
+      - name: install dependencies
+        run: pnpm install
+      - name: build
+        run: pnpm build
+      - name: publish
+        uses: changesets/action@63a615b9cd06ba9a3e6d13796c7fbcb080a60a0b
+        with:
           publish: pnpm ci:publish
           createGithubReleases: true
           setupGitUser: true
