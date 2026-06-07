@@ -7,8 +7,5 @@ saveExact: true
 preferFrozenLockfile: true
 minimumReleaseAgeExclude:
   - '@verdaccio/*'
-  - '@verdaccio-scope/*'
   - 'verdaccio-*'
-saveExact: true
 ignoreScripts: true
-preferFrozenLockfile: true
