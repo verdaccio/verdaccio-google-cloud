@@ -3,6 +3,8 @@ allowBuilds:
   protobufjs: false
   unrs-resolver: true
 minimumReleaseAge: 10080
+saveExact: true
+preferFrozenLockfile: true
 minimumReleaseAgeExclude:
   - '@verdaccio/*'
   - '@verdaccio-scope/*'
