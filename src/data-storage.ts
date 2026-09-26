@@ -129,11 +129,16 @@ export default class GoogleCloudDatabase {
    * so results must be SearchItem, not the bare package shape the old callback API used.
    */
   public async search(query: searchUtils.SearchQuery): Promise<searchUtils.SearchItem[]> {
-    debug('search text=%o', query?.text);
-    this.logger.trace({text: query?.text}, 'google-cloud: [search] @{text}');
+    // Depending on the verdaccio build, this arrives either as the SearchQuery itself or
+    // wrapped as { query, url, abort }. Reading only `.text` matched everything and made
+    // the core walk every package, which timed the endpoint out.
+    const search = (query ?? {}) as searchUtils.SearchQuery & {query?: searchUtils.SearchQuery};
+    const rawText = search.text ?? search.query?.text;
+    debug('search keys=%o text=%o', Object.keys(search), rawText);
+    this.logger.trace({text: rawText}, 'google-cloud: [search] @{text}');
 
     const entities = await this.helper.getEntities(this.kind);
-    const text = query?.text?.toLowerCase();
+    const text = rawText?.toLowerCase();
     const matched = text
       ? entities.filter((item): boolean => item.name.toLowerCase().includes(text))
       : entities;

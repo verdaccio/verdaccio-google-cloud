@@ -176,6 +176,24 @@ describe('Google Cloud Database', () => {
       expect(items[0].score.final).toBeDefined();
     });
 
+    // Some verdaccio builds hand over { query, url, abort } instead of the query itself.
+    // Missing the text meant matching everything, which timed the endpoint out.
+    test('also reads the text when the query arrives wrapped', async () => {
+      const cloudDatabase = getCloudDatabase();
+      (cloudDatabase as any).helper = {
+        getEntities: () =>
+          Promise.resolve([
+            {name: 'alpha-pkg', key: {}},
+            {name: 'beta-pkg', key: {}},
+          ]),
+      };
+
+      const items = await cloudDatabase.search({query: {text: 'beta'}} as any);
+
+      expect(items).toHaveLength(1);
+      expect(items[0].package.name).toBe('beta-pkg');
+    });
+
     test('should handle promise pattern search', async () => {
       const cloudDatabase = getCloudDatabase();
       const results = await cloudDatabase.search({text: 'test'});
