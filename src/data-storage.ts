@@ -128,26 +128,53 @@ export default class GoogleCloudDatabase {
    * Verdaccio 9.x calls this with the query object and reads `item.package.name`,
    * so results must be SearchItem, not the bare package shape the old callback API used.
    */
-  public async search(query: searchUtils.SearchQuery): Promise<searchUtils.SearchItem[]> {
-    // Depending on the verdaccio build, this arrives either as the SearchQuery itself or
-    // wrapped as { query, url, abort }. Reading only `.text` matched everything and made
-    // the core walk every package, which timed the endpoint out.
-    const search = (query ?? {}) as searchUtils.SearchQuery & {query?: searchUtils.SearchQuery};
-    const rawText = search.text ?? search.query?.text;
-    debug('search keys=%o text=%o', Object.keys(search), rawText);
-    this.logger.trace({text: rawText}, 'google-cloud: [search] @{text}');
-
-    const entities = await this.helper.getEntities(this.kind);
-    const text = rawText?.toLowerCase();
-    const matched = text
-      ? entities.filter((item): boolean => item.name.toLowerCase().includes(text))
-      : entities;
-
-    debug('search matched %d of %d packages', matched.length, entities.length);
-    return matched.map((item): searchUtils.SearchItem => ({
-      package: {name: item.name, path: item.name, time: Date.now()},
+  private toSearchItem(name: string): searchUtils.SearchItem {
+    return {
+      package: {name, path: name, time: Date.now()},
       score: {final: 1, detail: {quality: 1, popularity: 1, maintenance: 1}},
-    }));
+    };
+  }
+
+  /**
+   * Called either as search(onPackage, onEnd) or as search(query). Both consumers read
+   * `item.package.name`, so both must emit SearchItem and not the bare package shape.
+   */
+  public search(...args: any[]): any {
+    if (typeof args[0] === 'function') {
+      const onPackage = args[0] as (item: searchUtils.SearchItem, cb: () => void) => void;
+      const onEnd = args[1] as (err?: Error) => void;
+      debug('search (callback)');
+      void (async (): Promise<void> => {
+        try {
+          const entities = await this.helper.getEntities(this.kind);
+          debug('search (callback) emitting %d packages', entities.length);
+          for (const item of entities) {
+            await new Promise<void>((resolve): void => {
+              onPackage(this.toSearchItem(item.name), resolve);
+            });
+          }
+          onEnd();
+        } catch (err: any) {
+          debug('search (callback) failed: %o', err);
+          this.logger.error({err}, 'google-cloud: [search] failed: @{err.message}');
+          // onEnd must always run, or the request hangs until the client gives up
+          onEnd(err);
+        }
+      })();
+      return;
+    }
+
+    const query = (args[0] ?? {}) as searchUtils.SearchQuery & {query?: searchUtils.SearchQuery};
+    const text = (query.text ?? query.query?.text)?.toLowerCase();
+    debug('search (promise) text=%o', text);
+    return (async (): Promise<searchUtils.SearchItem[]> => {
+      const entities = await this.helper.getEntities(this.kind);
+      const matched = text
+        ? entities.filter((item): boolean => item.name.toLowerCase().includes(text))
+        : entities;
+      debug('search (promise) matched %d of %d', matched.length, entities.length);
+      return matched.map((item): searchUtils.SearchItem => this.toSearchItem(item.name));
+    })();
   }
 
   public async filterByQuery(

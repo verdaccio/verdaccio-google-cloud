@@ -2,12 +2,13 @@
 'verdaccio-google-cloud': patch
 ---
 
-Fix `/-/v1/search`, which answered 500.
+Fix `/-/v1/search`, which answered 500 and then hung.
 
-Verdaccio 9.x calls `search(query)` and reads `item.package.name`. The plugin still
-implemented the old callback API and its promise branch always resolved to an empty
-array, so the endpoint either crashed or returned nothing. It now returns
-`SearchItem[]` and filters on `query.text`.
+The core drives the plugin through `search(onPackage, onEnd)` and reads
+`item.package.name` from whatever is emitted. The plugin emitted the bare
+`{name, path, time}` shape, so the endpoint answered 500, and its promise branch
+resolved to an empty array. Both paths now emit `SearchItem`, and `onEnd` runs on
+failure too — without it the request hung until the client aborted.
 
 Fix removing a package, which answered 422 and leaked every object.
 

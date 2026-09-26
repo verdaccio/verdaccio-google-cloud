@@ -194,6 +194,46 @@ describe('Google Cloud Database', () => {
       expect(items[0].package.name).toBe('beta-pkg');
     });
 
+    // Regression: the core calls search(onPackage, onEnd). Emitting the bare package
+    // shape made the consumer read .package.name of undefined (500), and never calling
+    // onEnd left the request hanging until the client aborted (50s/90s timeouts).
+    test('callback pattern emits SearchItem and always ends', async () => {
+      const cloudDatabase = getCloudDatabase();
+      (cloudDatabase as any).helper = {
+        getEntities: () => Promise.resolve([{name: 'alpha-pkg', key: {}}]),
+      };
+
+      const seen: any[] = [];
+      await new Promise<void>((resolve) => {
+        (cloudDatabase as any).search(
+          (item: any, cb: () => void) => {
+            seen.push(item);
+            cb();
+          },
+          () => resolve()
+        );
+      });
+
+      expect(seen).toHaveLength(1);
+      expect(seen[0].package.name).toBe('alpha-pkg');
+    });
+
+    test('callback pattern ends even when the datastore fails', async () => {
+      const cloudDatabase = getCloudDatabase();
+      (cloudDatabase as any).helper = {
+        getEntities: () => Promise.reject(new Error('datastore down')),
+      };
+
+      const err = await new Promise<any>((resolve) => {
+        (cloudDatabase as any).search(
+          () => undefined,
+          (e: any) => resolve(e)
+        );
+      });
+
+      expect(err?.message).toBe('datastore down');
+    });
+
     test('should handle promise pattern search', async () => {
       const cloudDatabase = getCloudDatabase();
       const results = await cloudDatabase.search({text: 'test'});
