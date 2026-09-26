@@ -157,6 +157,25 @@ describe('Google Cloud Database', () => {
   });
 
   describe('search', () => {
+    // Regression: verdaccio 9.x calls search(query) and reads item.package.name.
+    // Returning the bare {name, path, time} shape made /-/v1/search answer 500.
+    test('returns SearchItem objects with a package wrapper', async () => {
+      const cloudDatabase = getCloudDatabase();
+      (cloudDatabase as any).helper = {
+        getEntities: () =>
+          Promise.resolve([
+            {name: 'alpha-pkg', key: {}},
+            {name: 'beta-pkg', key: {}},
+          ]),
+      };
+
+      const items = await cloudDatabase.search({text: 'alpha'} as any);
+
+      expect(items).toHaveLength(1);
+      expect(items[0].package.name).toBe('alpha-pkg');
+      expect(items[0].score.final).toBeDefined();
+    });
+
     test('should handle promise pattern search', async () => {
       const cloudDatabase = getCloudDatabase();
       const results = await cloudDatabase.search({text: 'test'});

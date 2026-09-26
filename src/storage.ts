@@ -100,26 +100,29 @@ export default class GoogleCloudStorageHandler {
   }
 
   public removePackage(callback: Callback): void {
-    const file = this.helper.getBucket().file(`${this.name}`);
-    debug('removePackage package=%o', file.name);
-    this.logger.trace({name: file.name}, 'gcloud: removing the package @{name} from storage');
-    file.delete().then(
-      (): void => {
-        debug('removePackage package=%o success', file.name);
+    // GCS has no directories: `${this.name}` is not an object, the package's files live
+    // under the `${this.name}/` prefix. Deleting that name 404s and leaks every object.
+    const prefix = `${this.name}/`;
+    debug('removePackage prefix=%o', prefix);
+    this.logger.trace({name: prefix}, 'gcloud: removing the package @{name} from storage');
+    this.helper
+      .getBucket()
+      .deleteFiles({prefix})
+      .then((): void => {
+        debug('removePackage prefix=%o success', prefix);
         this.logger.trace(
-          {name: file.name},
+          {name: prefix},
           'gcloud: package @{name} was deleted successfully from storage'
         );
         callback(null);
-      },
-      (err: Error): void => {
+      })
+      .catch((err: Error): void => {
         this.logger.error(
-          {name: file.name, err: err.message},
+          {name: prefix, err: err.message},
           'gcloud: delete @{name} package has failed err: @{err}'
         );
         callback(errorUtils.getInternalError(err.message));
-      }
-    );
+      });
   }
 
   public createPackage(name: string, metadata: Package, cb: Callback): void {

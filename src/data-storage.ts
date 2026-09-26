@@ -124,43 +124,25 @@ export default class GoogleCloudDatabase {
     return options;
   }
 
-  public search(...args: any[]): any {
-    // Callback pattern: search(onPackage, onEnd)
-    if (typeof args[0] === 'function') {
-      const onPackage = args[0] as (item: any, cb: any) => void;
-      const onEnd = args[1] as () => void;
-      debug('search (callback): iterating packages from Datastore');
-      this.logger.trace('google-cloud: [search] callback pattern, iterating packages');
-      void (async (): Promise<void> => {
-        try {
-          const entities = await this.helper.getEntities(this.kind);
-          debug('search: found %d packages', entities.length);
-          for (const item of entities) {
-            await new Promise<void>((resolve): void => {
-              onPackage(
-                {
-                  name: item.name,
-                  path: item.name,
-                  time: Date.now(),
-                },
-                resolve
-              );
-            });
-          }
-          onEnd();
-        } catch (err) {
-          debug('search error: %o', err);
-          this.logger.trace({err}, 'google-cloud: [search] error during iteration');
-          onEnd();
-        }
-      })();
-      return;
-    }
+  /**
+   * Verdaccio 9.x calls this with the query object and reads `item.package.name`,
+   * so results must be SearchItem, not the bare package shape the old callback API used.
+   */
+  public async search(query: searchUtils.SearchQuery): Promise<searchUtils.SearchItem[]> {
+    debug('search text=%o', query?.text);
+    this.logger.trace({text: query?.text}, 'google-cloud: [search] @{text}');
 
-    // Promise pattern: search(query): Promise<SearchItem[]>
-    debug('search (promise): returning empty results');
-    this.logger.trace('google-cloud: [search] promise pattern, returning empty results');
-    return Promise.resolve([]);
+    const entities = await this.helper.getEntities(this.kind);
+    const text = query?.text?.toLowerCase();
+    const matched = text
+      ? entities.filter((item): boolean => item.name.toLowerCase().includes(text))
+      : entities;
+
+    debug('search matched %d of %d packages', matched.length, entities.length);
+    return matched.map((item): searchUtils.SearchItem => ({
+      package: {name: item.name, path: item.name, time: Date.now()},
+      score: {final: 1, detail: {quality: 1, popularity: 1, maintenance: 1}},
+    }));
   }
 
   public async filterByQuery(

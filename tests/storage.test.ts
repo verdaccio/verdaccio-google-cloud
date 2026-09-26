@@ -139,15 +139,12 @@ describe('GoogleCloudStorageHandler', () => {
   });
 
   describe('removePackage', () => {
-    test('should remove an entire package', async () => {
+    // Regression: `${name}` is not an object in GCS, the files live under `${name}/`.
+    // Deleting the bare name 404s, so unpublish answered 422 and every object leaked.
+    test('should remove an entire package by prefix', async () => {
       const helper = createMockHelper();
-      const mockFile = {
-        name: 'test-pkg',
-        delete: vi.fn().mockResolvedValue(undefined),
-      };
-      (helper.getBucket as any).mockReturnValue({
-        file: vi.fn().mockReturnValue(mockFile),
-      });
+      const deleteFiles = vi.fn().mockResolvedValue([[]]);
+      (helper.getBucket as any).mockReturnValue({deleteFiles});
 
       const store = new GoogleCloudStorageHandler('test-pkg', helper, config, logger);
 
@@ -155,6 +152,7 @@ describe('GoogleCloudStorageHandler', () => {
         store.removePackage(resolve);
       });
       expect(err).toBeNull();
+      expect(deleteFiles).toHaveBeenCalledWith({prefix: 'test-pkg/'});
     });
   });
 
