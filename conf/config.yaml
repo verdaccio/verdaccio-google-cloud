@@ -12,19 +12,15 @@ store:
     apiEndpoint: GCS_API_ENDPOINT
     datastoreEndpoint: DATASTORE_ENDPOINT
 
-uplinks:
-  npmjs:
-    url: https://registry.npmjs.org/
-
+# no uplink on purpose: the e2e battery only ever uses packages it publishes itself, and
+# proxying to npmjs made every lookup a network round trip, which hung /-/v1/search
 packages:
   '@*/*':
     access: $all
     publish: $all
-    proxy: npmjs
   '**':
     access: $all
     publish: $all
-    proxy: npmjs
 
 log:
   - {type: stdout, format: pretty, level: trace}
