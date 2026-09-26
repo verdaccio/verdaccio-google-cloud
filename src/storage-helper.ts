@@ -1,8 +1,8 @@
+import type {GoogleCloudConfig} from '../types';
+
 import type {Datastore, Query} from '@google-cloud/datastore';
 import type {RunQueryResponse} from '@google-cloud/datastore/build/src/query';
 import type {Bucket, File, Storage} from '@google-cloud/storage';
-
-import type {GoogleCloudConfig} from '../types';
 
 export interface IStorageHelper {
   datastore: Datastore;

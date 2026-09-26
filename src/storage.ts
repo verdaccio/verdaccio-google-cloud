@@ -1,7 +1,3 @@
-import type {File} from '@google-cloud/storage';
-import debugCore from 'debug';
-import type {Readable} from 'stream';
-
 import {errorUtils} from '@verdaccio/core';
 import type {VerdaccioError} from '@verdaccio/core';
 import {ReadTarball, UploadTarball} from '@verdaccio/streams';
@@ -9,6 +5,10 @@ import type {Callback, Logger, Package} from '@verdaccio/types';
 
 import type {GoogleCloudConfig} from '../types';
 import type {IStorageHelper} from './storage-helper';
+
+import type {File} from '@google-cloud/storage';
+import debugCore from 'debug';
+import type {Readable} from 'stream';
 
 const debug = debugCore('verdaccio:plugin:google-cloud:storage');
 

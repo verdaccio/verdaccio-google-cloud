@@ -1,8 +1,7 @@
-import {join} from 'node:path';
-
-import {describe, expect, test} from 'vitest';
-
 import {verifyPlugin} from '@verdaccio/plugin-verifier';
+
+import {join} from 'node:path';
+import {describe, expect, test} from 'vitest';
 
 describe('Plugin loading verification', () => {
   test('should be loadable by verdaccio as a storage plugin', async () => {

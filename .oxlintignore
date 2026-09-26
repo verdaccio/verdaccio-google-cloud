@@ -1,0 +1,4 @@
+lib/
+pnpm-lock.yaml
+node_modules/
+tests/partials/test-corrupt-pkg/

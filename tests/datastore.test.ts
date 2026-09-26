@@ -1,9 +1,9 @@
-import {beforeEach, describe, expect, test, vi} from 'vitest';
-
 import type {Logger} from '@verdaccio/types';
 
 import GoogleCloudDatabase, {ERROR_MISSING_CONFIG} from '../src/data-storage';
 import storageConfig from './partials/config';
+
+import {beforeEach, describe, expect, test, vi} from 'vitest';
 
 // Mock Google Cloud SDK with proper class constructors
 vi.mock('@google-cloud/datastore', () => {
