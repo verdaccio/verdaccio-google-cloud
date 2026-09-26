@@ -5,6 +5,7 @@ import type {IStorageHelper} from '../src/storage-helper';
 import type {GoogleCloudConfig} from '../types';
 import {generatePackage} from './partials/utils.helpers';
 
+import {PassThrough} from 'stream';
 import {beforeEach, describe, expect, test, vi} from 'vitest';
 
 const createLogger = (): Logger => ({
@@ -138,15 +139,12 @@ describe('GoogleCloudStorageHandler', () => {
   });
 
   describe('removePackage', () => {
-    test('should remove an entire package', async () => {
+    // Regression: `${name}` is not an object in GCS, the files live under `${name}/`.
+    // Deleting the bare name 404s, so unpublish answered 422 and every object leaked.
+    test('should remove an entire package by prefix', async () => {
       const helper = createMockHelper();
-      const mockFile = {
-        name: 'test-pkg',
-        delete: vi.fn().mockResolvedValue(undefined),
-      };
-      (helper.getBucket as any).mockReturnValue({
-        file: vi.fn().mockReturnValue(mockFile),
-      });
+      const deleteFiles = vi.fn().mockResolvedValue([[]]);
+      (helper.getBucket as any).mockReturnValue({deleteFiles});
 
       const store = new GoogleCloudStorageHandler('test-pkg', helper, config, logger);
 
@@ -154,6 +152,37 @@ describe('GoogleCloudStorageHandler', () => {
         store.removePackage(resolve);
       });
       expect(err).toBeNull();
+      expect(deleteFiles).toHaveBeenCalledWith({prefix: 'test-pkg/'});
+    });
+  });
+
+  describe('readTarball', () => {
+    // Regression: GCS reports a missing object through BOTH 'response' (404) and 'error'.
+    // Emitting twice throws once verdaccio has dropped its listener, and the uncaught
+    // exception takes the whole registry process down.
+    test('emits a single error when the object is missing', async () => {
+      const bucketStream = new PassThrough();
+      const helper = createMockHelper();
+      (helper.getBucket as any).mockReturnValue({
+        file: vi.fn().mockReturnValue({
+          name: 'test-pkg/missing.tgz',
+          createReadStream: vi.fn().mockReturnValue(bucketStream),
+        }),
+      });
+
+      const store = new GoogleCloudStorageHandler('test-pkg', helper, config, logger);
+      const stream = store.readTarball('missing.tgz');
+
+      const errors: any[] = [];
+      stream.on('error', (err) => errors.push(err));
+
+      // both paths fire for the same missing object
+      bucketStream.emit('response', {statusCode: 404, headers: {}});
+      bucketStream.emit('error', Object.assign(new Error('Not Found'), {code: 404}));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].code).toBe(404);
     });
   });
 });

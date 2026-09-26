@@ -124,43 +124,62 @@ export default class GoogleCloudDatabase {
     return options;
   }
 
+  /**
+   * Verdaccio 9.x calls this with the query object and reads `item.package.name`,
+   * so results must be SearchItem, not the bare package shape the old callback API used.
+   */
+  private toSearchItem(name: string): searchUtils.SearchItem {
+    return {
+      package: {name, path: name, time: Date.now()},
+      score: {final: 1, detail: {quality: 1, popularity: 1, maintenance: 1}},
+    };
+  }
+
+  /**
+   * Called either as search(onPackage, onEnd) or as search(query). Both consumers read
+   * `item.package.name`, so both must emit SearchItem and not the bare package shape.
+   */
   public search(...args: any[]): any {
-    // Callback pattern: search(onPackage, onEnd)
     if (typeof args[0] === 'function') {
-      const onPackage = args[0] as (item: any, cb: any) => void;
-      const onEnd = args[1] as () => void;
-      debug('search (callback): iterating packages from Datastore');
-      this.logger.trace('google-cloud: [search] callback pattern, iterating packages');
+      const onPackage = args[0] as (item: searchUtils.SearchItem, cb: () => void) => void;
+      const onEnd = args[1] as (err?: Error) => void;
+      // legacy signature: the third argument decides which names are emitted
+      const validateName = args[2] as ((name: string) => boolean) | undefined;
+      debug('search (callback)');
       void (async (): Promise<void> => {
         try {
           const entities = await this.helper.getEntities(this.kind);
-          debug('search: found %d packages', entities.length);
-          for (const item of entities) {
+          const selected = validateName
+            ? entities.filter((item): boolean => validateName(item.name))
+            : entities;
+          debug('search (callback) emitting %d of %d packages', selected.length, entities.length);
+          for (const item of selected) {
             await new Promise<void>((resolve): void => {
-              onPackage(
-                {
-                  name: item.name,
-                  path: item.name,
-                  time: Date.now(),
-                },
-                resolve
-              );
+              onPackage(this.toSearchItem(item.name), resolve);
             });
           }
           onEnd();
-        } catch (err) {
-          debug('search error: %o', err);
-          this.logger.trace({err}, 'google-cloud: [search] error during iteration');
-          onEnd();
+        } catch (err: any) {
+          debug('search (callback) failed: %o', err);
+          this.logger.error({err}, 'google-cloud: [search] failed: @{err.message}');
+          // onEnd must always run, or the request hangs until the client gives up
+          onEnd(err);
         }
       })();
       return;
     }
 
-    // Promise pattern: search(query): Promise<SearchItem[]>
-    debug('search (promise): returning empty results');
-    this.logger.trace('google-cloud: [search] promise pattern, returning empty results');
-    return Promise.resolve([]);
+    const query = (args[0] ?? {}) as searchUtils.SearchQuery & {query?: searchUtils.SearchQuery};
+    const text = (query.text ?? query.query?.text)?.toLowerCase();
+    debug('search (promise) text=%o', text);
+    return (async (): Promise<searchUtils.SearchItem[]> => {
+      const entities = await this.helper.getEntities(this.kind);
+      const matched = text
+        ? entities.filter((item): boolean => item.name.toLowerCase().includes(text))
+        : entities;
+      debug('search (promise) matched %d of %d', matched.length, entities.length);
+      return matched.map((item): searchUtils.SearchItem => this.toSearchItem(item.name));
+    })();
   }
 
   public async filterByQuery(
@@ -312,9 +331,7 @@ export default class GoogleCloudDatabase {
         const entities = await this.helper.getEntities(this.kind);
         for (const item of entities) {
           if (item.name === name) {
-            const datastore = this.helper.datastore;
-            const key = datastore.key([this.kind, datastore.int(item.id)]);
-            await datastore.delete(key);
+            await this.helper.datastore.delete(item.key);
           }
         }
         debug('remove package=%o success', name);

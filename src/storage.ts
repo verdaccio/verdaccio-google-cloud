@@ -1,6 +1,5 @@
 import {errorUtils} from '@verdaccio/core';
 import type {VerdaccioError} from '@verdaccio/core';
-import {ReadTarball, UploadTarball} from '@verdaccio/streams';
 import type {Callback, Logger, Package} from '@verdaccio/types';
 
 import type {GoogleCloudConfig} from '../types';
@@ -8,6 +7,7 @@ import type {IStorageHelper} from './storage-helper';
 
 import type {File} from '@google-cloud/storage';
 import debugCore from 'debug';
+import {PassThrough} from 'stream';
 import type {Readable} from 'stream';
 
 const debug = debugCore('verdaccio:plugin:google-cloud:storage');
@@ -100,26 +100,29 @@ export default class GoogleCloudStorageHandler {
   }
 
   public removePackage(callback: Callback): void {
-    const file = this.helper.getBucket().file(`${this.name}`);
-    debug('removePackage package=%o', file.name);
-    this.logger.trace({name: file.name}, 'gcloud: removing the package @{name} from storage');
-    file.delete().then(
-      (): void => {
-        debug('removePackage package=%o success', file.name);
+    // GCS has no directories: `${this.name}` is not an object, the package's files live
+    // under the `${this.name}/` prefix. Deleting that name 404s and leaks every object.
+    const prefix = `${this.name}/`;
+    debug('removePackage prefix=%o', prefix);
+    this.logger.trace({name: prefix}, 'gcloud: removing the package @{name} from storage');
+    this.helper
+      .getBucket()
+      .deleteFiles({prefix})
+      .then((): void => {
+        debug('removePackage prefix=%o success', prefix);
         this.logger.trace(
-          {name: file.name},
+          {name: prefix},
           'gcloud: package @{name} was deleted successfully from storage'
         );
         callback(null);
-      },
-      (err: Error): void => {
+      })
+      .catch((err: Error): void => {
         this.logger.error(
-          {name: file.name, err: err.message},
+          {name: prefix, err: err.message},
           'gcloud: delete @{name} package has failed err: @{err}'
         );
         callback(errorUtils.getInternalError(err.message));
-      }
-    );
+      });
   }
 
   public createPackage(name: string, metadata: Package, cb: Callback): void {
@@ -235,8 +238,13 @@ export default class GoogleCloudStorageHandler {
     }
   }
 
-  public writeTarball(name: string): UploadTarball {
-    const uploadStream: UploadTarball = new UploadTarball({});
+  public writeTarball(name: string): PassThrough & {abort?: () => void; done?: () => void} {
+    const uploadStream: PassThrough & {abort?: () => void; done?: () => void} = new PassThrough();
+
+    let streamEnded = 0;
+    uploadStream.on('end', () => {
+      streamEnded = 1;
+    });
 
     try {
       this._fileExist(this.name, name).then(
@@ -256,7 +264,7 @@ export default class GoogleCloudStorageHandler {
               validation: this.config.validation || defaultValidation,
             });
             uploadStream.done = (): void => {
-              uploadStream.on('end', (): void => {
+              const onEnd = (): void => {
                 fileStream.on('response', (): void => {
                   debug('writeTarball name=%o success', file.name);
                   this.logger.trace(
@@ -265,7 +273,12 @@ export default class GoogleCloudStorageHandler {
                   );
                   uploadStream.emit('success');
                 });
-              });
+              };
+              if (streamEnded) {
+                onEnd();
+              } else {
+                uploadStream.on('end', onEnd);
+              }
             };
 
             fileStream._destroy = function (err: Error): void {
@@ -312,8 +325,8 @@ export default class GoogleCloudStorageHandler {
     return uploadStream;
   }
 
-  public readTarball(name: string): ReadTarball {
-    const localReadStream: ReadTarball = new ReadTarball({});
+  public readTarball(name: string): PassThrough & {abort?: () => void} {
+    const localReadStream: PassThrough & {abort?: () => void} = new PassThrough();
     const file: File = this.helper.getBucket().file(`${this.name}/${name}`);
     const bucketStream: Readable = file.createReadStream();
     debug('readTarball name=%o', file.name);
@@ -323,18 +336,29 @@ export default class GoogleCloudStorageHandler {
       bucketStream.destroy(undefined);
     };
 
+    // a 404 reaches us through both 'response' and 'error'; emitting twice throws
+    // once verdaccio has dropped its listener, which takes the whole process down
+    let errorEmitted = false;
+    const emitError = (err: VerdaccioError): void => {
+      if (errorEmitted) {
+        return;
+      }
+      errorEmitted = true;
+      localReadStream.emit('error', err);
+    };
+
     bucketStream
       .on('error', (err: any): void => {
         if (err.code === 404) {
           debug('readTarball name=%o not found', file.name);
           this.logger.trace({url: file.name}, 'gcloud: tarball @{url} not found on storage');
-          localReadStream.emit('error', errorUtils.getNotFound());
+          emitError(errorUtils.getNotFound());
         } else {
           this.logger.error(
             {url: file.name},
             'gcloud: tarball @{url} has failed to be retrieved from storage'
           );
-          localReadStream.emit('error', errorUtils.getBadRequest(err.message));
+          emitError(errorUtils.getBadRequest(err.message));
         }
       })
       .on('response', (response: any): void => {
@@ -350,14 +374,14 @@ export default class GoogleCloudStorageHandler {
               {url: file.name},
               'gcloud: tarball @{url} was fetched from storage and it is empty'
             );
-            localReadStream.emit('error', errorUtils.getInternalError('file content empty'));
+            emitError(errorUtils.getInternalError('file content empty'));
           } else if (parseInt(size, 10) > 0 && statusCode === 200) {
             localReadStream.emit('content-length', response.headers['content-length']);
           }
         } else {
           debug('readTarball name=%o not found (404)', file.name);
           this.logger.trace({url: file.name}, 'gcloud: tarball @{url} not found on storage');
-          localReadStream.emit('error', errorUtils.getNotFound());
+          emitError(errorUtils.getNotFound());
         }
       })
       .pipe(localReadStream);

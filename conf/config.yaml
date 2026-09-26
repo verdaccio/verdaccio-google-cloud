@@ -2,6 +2,9 @@ storage: /verdaccio/storage
 
 plugins: /verdaccio/plugins
 
+# the e2e battery publishes tarballs larger than the 10mb default
+max_body_size: 100mb
+
 store:
   google-cloud:
     bucket: GCS_BUCKET
@@ -9,19 +12,15 @@ store:
     apiEndpoint: GCS_API_ENDPOINT
     datastoreEndpoint: DATASTORE_ENDPOINT
 
-uplinks:
-  npmjs:
-    url: https://registry.npmjs.org/
-
+# no uplink on purpose: the e2e battery only ever uses packages it publishes itself, and
+# proxying to npmjs made every lookup a network round trip, which hung /-/v1/search
 packages:
   '@*/*':
     access: $all
     publish: $all
-    proxy: npmjs
   '**':
     access: $all
     publish: $all
-    proxy: npmjs
 
 log:
   - {type: stdout, format: pretty, level: trace}

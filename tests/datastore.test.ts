@@ -157,6 +157,108 @@ describe('Google Cloud Database', () => {
   });
 
   describe('search', () => {
+    // Regression: verdaccio 9.x calls search(query) and reads item.package.name.
+    // Returning the bare {name, path, time} shape made /-/v1/search answer 500.
+    test('returns SearchItem objects with a package wrapper', async () => {
+      const cloudDatabase = getCloudDatabase();
+      (cloudDatabase as any).helper = {
+        getEntities: () =>
+          Promise.resolve([
+            {name: 'alpha-pkg', key: {}},
+            {name: 'beta-pkg', key: {}},
+          ]),
+      };
+
+      const items = await cloudDatabase.search({text: 'alpha'} as any);
+
+      expect(items).toHaveLength(1);
+      expect(items[0].package.name).toBe('alpha-pkg');
+      expect(items[0].score.final).toBeDefined();
+    });
+
+    // Some verdaccio builds hand over { query, url, abort } instead of the query itself.
+    // Missing the text meant matching everything, which timed the endpoint out.
+    test('also reads the text when the query arrives wrapped', async () => {
+      const cloudDatabase = getCloudDatabase();
+      (cloudDatabase as any).helper = {
+        getEntities: () =>
+          Promise.resolve([
+            {name: 'alpha-pkg', key: {}},
+            {name: 'beta-pkg', key: {}},
+          ]),
+      };
+
+      const items = await cloudDatabase.search({query: {text: 'beta'}} as any);
+
+      expect(items).toHaveLength(1);
+      expect(items[0].package.name).toBe('beta-pkg');
+    });
+
+    // Regression: the core calls search(onPackage, onEnd). Emitting the bare package
+    // shape made the consumer read .package.name of undefined (500), and never calling
+    // onEnd left the request hanging until the client aborted (50s/90s timeouts).
+    test('callback pattern emits SearchItem and always ends', async () => {
+      const cloudDatabase = getCloudDatabase();
+      (cloudDatabase as any).helper = {
+        getEntities: () => Promise.resolve([{name: 'alpha-pkg', key: {}}]),
+      };
+
+      const seen: any[] = [];
+      await new Promise<void>((resolve) => {
+        (cloudDatabase as any).search(
+          (item: any, cb: () => void) => {
+            seen.push(item);
+            cb();
+          },
+          () => resolve()
+        );
+      });
+
+      expect(seen).toHaveLength(1);
+      expect(seen[0].package.name).toBe('alpha-pkg');
+    });
+
+    test('callback pattern honours the validateName predicate', async () => {
+      const cloudDatabase = getCloudDatabase();
+      (cloudDatabase as any).helper = {
+        getEntities: () =>
+          Promise.resolve([
+            {name: 'alpha-pkg', key: {}},
+            {name: 'beta-pkg', key: {}},
+          ]),
+      };
+
+      const seen: string[] = [];
+      await new Promise<void>((resolve) => {
+        (cloudDatabase as any).search(
+          (item: any, cb: () => void) => {
+            seen.push(item.package.name);
+            cb();
+          },
+          () => resolve(),
+          (name: string) => name.startsWith('alpha')
+        );
+      });
+
+      expect(seen).toEqual(['alpha-pkg']);
+    });
+
+    test('callback pattern ends even when the datastore fails', async () => {
+      const cloudDatabase = getCloudDatabase();
+      (cloudDatabase as any).helper = {
+        getEntities: () => Promise.reject(new Error('datastore down')),
+      };
+
+      const err = await new Promise<any>((resolve) => {
+        (cloudDatabase as any).search(
+          () => undefined,
+          (e: any) => resolve(e)
+        );
+      });
+
+      expect(err?.message).toBe('datastore down');
+    });
+
     test('should handle promise pattern search', async () => {
       const cloudDatabase = getCloudDatabase();
       const results = await cloudDatabase.search({text: 'test'});
