@@ -1,6 +1,6 @@
 import type {GoogleCloudConfig} from '../types';
 
-import type {Datastore, Query} from '@google-cloud/datastore';
+import type {Datastore, Key, Query} from '@google-cloud/datastore';
 import type {RunQueryResponse} from '@google-cloud/datastore/build/src/query';
 import type {Bucket, File, Storage} from '@google-cloud/storage';
 
@@ -52,7 +52,7 @@ export default class StorageHelper implements IStorageHelper {
       const taskKey = task[datastore.KEY];
       if (task.name) {
         accumulator.push({
-          id: taskKey.id,
+          key: taskKey,
           name: task.name,
         });
       }
@@ -64,5 +64,6 @@ export default class StorageHelper implements IStorageHelper {
 
 export interface Entity {
   name: string;
-  id: number;
+  // the entity's own key: packages are stored under a name key, so it cannot be rebuilt from an id
+  key: Key;
 }

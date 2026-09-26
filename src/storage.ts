@@ -333,18 +333,29 @@ export default class GoogleCloudStorageHandler {
       bucketStream.destroy(undefined);
     };
 
+    // a 404 reaches us through both 'response' and 'error'; emitting twice throws
+    // once verdaccio has dropped its listener, which takes the whole process down
+    let errorEmitted = false;
+    const emitError = (err: VerdaccioError): void => {
+      if (errorEmitted) {
+        return;
+      }
+      errorEmitted = true;
+      localReadStream.emit('error', err);
+    };
+
     bucketStream
       .on('error', (err: any): void => {
         if (err.code === 404) {
           debug('readTarball name=%o not found', file.name);
           this.logger.trace({url: file.name}, 'gcloud: tarball @{url} not found on storage');
-          localReadStream.emit('error', errorUtils.getNotFound());
+          emitError(errorUtils.getNotFound());
         } else {
           this.logger.error(
             {url: file.name},
             'gcloud: tarball @{url} has failed to be retrieved from storage'
           );
-          localReadStream.emit('error', errorUtils.getBadRequest(err.message));
+          emitError(errorUtils.getBadRequest(err.message));
         }
       })
       .on('response', (response: any): void => {
@@ -360,14 +371,14 @@ export default class GoogleCloudStorageHandler {
               {url: file.name},
               'gcloud: tarball @{url} was fetched from storage and it is empty'
             );
-            localReadStream.emit('error', errorUtils.getInternalError('file content empty'));
+            emitError(errorUtils.getInternalError('file content empty'));
           } else if (parseInt(size, 10) > 0 && statusCode === 200) {
             localReadStream.emit('content-length', response.headers['content-length']);
           }
         } else {
           debug('readTarball name=%o not found (404)', file.name);
           this.logger.trace({url: file.name}, 'gcloud: tarball @{url} not found on storage');
-          localReadStream.emit('error', errorUtils.getNotFound());
+          emitError(errorUtils.getNotFound());
         }
       })
       .pipe(localReadStream);

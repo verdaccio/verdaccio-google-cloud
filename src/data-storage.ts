@@ -312,9 +312,7 @@ export default class GoogleCloudDatabase {
         const entities = await this.helper.getEntities(this.kind);
         for (const item of entities) {
           if (item.name === name) {
-            const datastore = this.helper.datastore;
-            const key = datastore.key([this.kind, datastore.int(item.id)]);
-            await datastore.delete(key);
+            await this.helper.datastore.delete(item.key);
           }
         }
         debug('remove package=%o success', name);
