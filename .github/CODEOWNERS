@@ -1,0 +1,11 @@
+# Auto-request a review from verdacciobot on release ("build: release packages") PRs.
+#
+# The Changesets version PR always rewrites CHANGELOG.md for every bumped package,
+# whereas feature PRs only add files under .changeset/. Owning the changelogs makes
+# GitHub request verdacciobot's review on the release PR without firing on every PR.
+#
+# Note: verdacciobot must be a repo collaborator (read access) for this to take
+# effect, and this file must live on the default branch.
+
+CHANGELOG.md      @verdacciobot
+**/CHANGELOG.md   @verdacciobot

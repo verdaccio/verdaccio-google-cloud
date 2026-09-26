@@ -1,5 +1,6 @@
-import {defineConfig} from 'cypress';
 import {setupVerdaccioTasks} from '@verdaccio/e2e-ui';
+
+import {defineConfig} from 'cypress';
 
 const registryUrl = process.env.VERDACCIO_URL || 'http://localhost:4873';
 

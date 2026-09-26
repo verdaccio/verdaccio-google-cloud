@@ -1,5 +1,23 @@
 # Changelog
 
+## 11.1.3
+
+### Patch Changes
+
+- ecf04d6: chore: force release with env
+
+## 11.1.2
+
+### Patch Changes
+
+- 31d5809: chore: release bump
+
+## 11.1.1
+
+### Patch Changes
+
+- 66013ba: fix: build package before publishing so `lib/` is included in the published tarball
+
 ## 11.1.0
 
 ### Minor Changes

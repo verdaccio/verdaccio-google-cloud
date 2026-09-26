@@ -1,15 +1,16 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
   "baseBranches": ["master"],
   "prConcurrentLimit": 1,
   "prHourlyLimit": 1,
   "labels": ["dependencies"],
   "minimumReleaseAge": "60 days",
+  "pinVersions": true,
   "packageRules": [
     {
-      "description": "Block @verdaccio/streams and @verdaccio/eslint-config from being updated",
-      "matchPackageNames": ["@verdaccio/streams", "@verdaccio/eslint-config"],
+      "description": "Block @verdaccio/streams from being updated",
+      "matchPackageNames": ["@verdaccio/streams"],
       "enabled": false
     },
     {
@@ -35,9 +36,6 @@
         "vite-plugin-dts",
         "vitest",
         "typescript",
-        "eslint",
-        "typescript-eslint",
-        "prettier",
         "rimraf",
         "cross-env"
       ],
@@ -55,21 +53,31 @@
     {
       "description": "All other dependencies — monthly",
       "matchPackagePatterns": ["*"],
-      "excludePackagePatterns": ["^@verdaccio/", "^@google-cloud/", "^@types/"],
+      "excludePackagePatterns": [
+        "^@verdaccio/",
+        "^@google-cloud/",
+        "^@types/",
+        "^oxlint",
+        "^oxfmt"
+      ],
       "excludePackageNames": [
         "vite",
         "vite-plugin-dts",
         "vitest",
         "typescript",
-        "eslint",
-        "typescript-eslint",
-        "prettier",
         "rimraf",
         "cross-env"
       ],
       "groupName": "other-dependencies",
       "schedule": ["before 6am on the first day of the month"],
       "automerge": false
+    },
+    {
+      "description": "oxlint and oxfmt — move fast, gate at the 7 days pnpm-workspace.yaml enforces",
+      "matchPackagePatterns": ["^oxlint", "^oxfmt"],
+      "groupName": "oxlint & oxfmt",
+      "groupSlug": "oxlint-oxfmt",
+      "minimumReleaseAge": "7 days"
     }
   ]
 }

@@ -1,0 +1,15 @@
+packages:
+  - .
+allowBuilds:
+  esbuild: true
+  protobufjs: false
+  unrs-resolver: true
+minimumReleaseAge: 10080
+saveExact: true
+preferFrozenLockfile: true
+minimumReleaseAgeExclude:
+  - '@verdaccio/*'
+  - 'verdaccio-*'
+  # Renovate security update: vite@8.0.5
+  - vite@8.0.5
+ignoreScripts: true
