@@ -150,6 +150,8 @@ export default class GoogleCloudDatabase {
         args.length,
         args.map((a): string => typeof a)
       );
+      // temporary: the published packages do not match this image, ask the runtime
+      debug('search (callback) caller=%o', new Error('search caller').stack);
       void (async (): Promise<void> => {
         try {
           const entities = await this.helper.getEntities(this.kind);
