@@ -2,6 +2,9 @@ storage: /verdaccio/storage
 
 plugins: /verdaccio/plugins
 
+# the e2e battery publishes tarballs larger than the 10mb default
+max_body_size: 100mb
+
 store:
   google-cloud:
     bucket: GCS_BUCKET

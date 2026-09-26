@@ -30,6 +30,7 @@
     "build": "vite build",
     "e2e:ui": "cypress open",
     "e2e:ui:run": "cypress run",
+    "e2e:registry": "verdaccio-e2e --registry http://localhost:4873",
     "ci:version:changeset": "changeset version",
     "ci:version": "pnpm ci:version:changeset && npm run ci:version:install",
     "ci:version:install": "pnpm install --frozen-lockfile=false",

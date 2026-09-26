@@ -106,28 +106,8 @@ jobs:
           docker compose logs verdaccio 2>&1
           docker compose logs verdaccio 2>&1 | grep -q "google-cloud"
 
-      - name: E2E - publish and fetch a package
-        run: |
-          TOKEN=$(curl -sf -X PUT http://localhost:4873/-/user/org.couchdb.user:test \
-            -H 'Content-Type: application/json' \
-            -d '{"name":"test","password":"test1234"}' | node -e "
-              process.stdin.setEncoding('utf8');
-              let d='';
-              process.stdin.on('data',c=>d+=c);
-              process.stdin.on('end',()=>console.log(JSON.parse(d).token))")
-
-          TMPDIR=$(mktemp -d)
-          echo '{"name":"ci-test-pkg","version":"1.0.0"}' > "$TMPDIR/package.json"
-          cd "$TMPDIR"
-          npm publish --registry http://localhost:4873 --//localhost:4873/:_authToken="$TOKEN"
-
-          RESULT=$(curl -sf http://localhost:4873/ci-test-pkg | node -e "
-            process.stdin.setEncoding('utf8');
-            let d='';
-            process.stdin.on('data',c=>d+=c);
-            process.stdin.on('end',()=>console.log(JSON.parse(d).name))")
-
-          [ "$RESULT" = "ci-test-pkg" ] && echo "E2E passed" || { echo "E2E failed"; exit 1; }
+      - name: E2E - registry battery (@verdaccio/e2e-cli)
+        run: pnpm e2e:registry --pm npm --pm pnpm
 
       - name: E2E UI - publish tests (Cypress)
         run: pnpm e2e:ui:run
@@ -135,7 +115,7 @@ jobs:
           VERDACCIO_URL: http://localhost:4873
 
       - name: Upload Cypress artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
           name: cypress-artifacts
@@ -143,6 +123,10 @@ jobs:
             cypress/videos
             cypress/screenshots
           retention-days: 7
+
+      - name: Verdaccio logs on failure
+        if: failure()
+        run: docker compose logs verdaccio
 
       - name: Stop services
         if: always()
