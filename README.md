@@ -6,6 +6,10 @@ Uses **Google Cloud Storage** for package tarballs and metadata, and **Cloud Dat
 
 Built with Google Cloud SDK for Node.js (`@google-cloud/storage` v7, `@google-cloud/datastore` v10).
 
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full picture with diagrams: what has to
+exist in your Google Cloud project, how the data is laid out in the bucket and in
+Datastore, the publish/install/unpublish flows, and the emulator stack used by CI.
+
 ## Requirements
 
 - **Node.js** >= 24
@@ -124,6 +128,8 @@ packages:
 
 ## Architecture
 
+A summary; [ARCHITECTURE.md](ARCHITECTURE.md) has the diagrams and the request flows.
+
 ```
                    +-----------+
                    | Verdaccio |
@@ -167,6 +173,9 @@ The plugin uses the following Datastore entity kinds:
 The entity kind for packages is configurable via the `kind` config option (default: `VerdaccioDataStore`).
 
 ### Setting up GCP resources (production)
+
+[ARCHITECTURE.md](ARCHITECTURE.md#google-cloud-requirements) explains why each resource is
+needed, which permissions map to which operation, and how credentials are resolved.
 
 #### Create a GCS bucket
 
