@@ -256,24 +256,19 @@ CI additionally runs [`@verdaccio/e2e-cli`](https://www.npmjs.com/package/@verda
 against this stack — publish, install, ci, audit, info, deprecate, dist-tags, ping, search
 and unpublish, with npm and pnpm — plus the Cypress web UI tests.
 
-### A limitation worth knowing: search cannot filter
+### Search needs verdaccio 7.0.0-next-7.28 or newer
 
-This plugin still implements the **callback-based** storage contract (`get(cb)`,
-`add(name, cb)`, and so on). Verdaccio detects that by arity and wraps it in
-`legacy-storage-adapter.cjs`, whose `search()` looks like this:
+This plugin implements the **callback-based** storage contract (`get(cb)`,
+`add(name, cb)`, and so on). Verdaccio detects that by arity and drives it through
+`legacy-storage-adapter.cjs`.
 
-```js
-function search(plugin, _query) {
-  // the query is discarded
-  plugin.search(onPackage, onEnd, () => true); // the name predicate always passes
-}
-```
+Until `7.0.0-next-7.28` that adapter discarded the search query and passed every item
+straight through, so `/-/v1/search` either answered with the whole catalogue whatever
+was searched for, or failed outright when the plugin emitted the shape the legacy
+contract documents. Both were fixed in
+[verdaccio#6279](https://github.com/verdaccio/verdaccio/pull/6279): the adapter now
+filters on the query text and normalises the item shape, for this plugin and for every
+other callback-based one.
 
-So a search query never reaches the plugin: it emits every package it knows about and
-the adapter hands the whole list back. `/-/v1/search` still answers, and the npm client
-still finds what it is looking for, but result counts and pagination do not narrow to the
-query, which is why the battery's `scenario:search` is excluded in CI.
-
-Fixing it means moving to the **promise-based storage API**, where `search(query)` is
-called directly and the plugin filters on `query.text` — the shape the promise branch in
-`data-storage.ts` already implements.
+On an older 7.x, search misbehaves in exactly that way and nothing in this plugin can
+work around it.
