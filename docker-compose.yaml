@@ -27,6 +27,9 @@ services:
       - '--host-port=0.0.0.0:8081'
       - '--project=verdaccio-test'
       - '--no-store-on-disk'
+      # the emulator default of 0.9 hides a fraction of writes from queries by kind,
+      # which search relies on; Datastore mode is strongly consistent in production
+      - '--consistency=1.0'
     ports:
       - '8081:8081'
     healthcheck:
