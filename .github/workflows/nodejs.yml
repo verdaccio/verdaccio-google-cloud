@@ -106,9 +106,6 @@ jobs:
           docker compose logs verdaccio 2>&1
           docker compose logs verdaccio 2>&1 | grep -q "google-cloud"
 
-      - name: E2E - registry battery (@verdaccio/e2e-cli)
-        run: pnpm e2e:registry --pm npm --pm pnpm
-
       - name: E2E UI - publish tests (Cypress)
         run: pnpm e2e:ui:run
         env:
@@ -123,6 +120,11 @@ jobs:
             cypress/videos
             cypress/screenshots
           retention-days: 7
+
+      # after Cypress on purpose: the UI detail suite opens the first package in the
+      # list, and the battery leaves dozens of them behind
+      - name: E2E - registry battery (@verdaccio/e2e-cli)
+        run: pnpm e2e:registry --pm npm --pm pnpm
 
       - name: Verdaccio logs on failure
         if: failure()
