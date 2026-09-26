@@ -1,5 +1,43 @@
 # Changelog
 
+## 11.2.0
+
+### Minor Changes
+
+- 01d2655: refactor: replace @verdaccio/streams with native Node.js PassThrough streams
+
+### Patch Changes
+
+- 01d2655: Fix `/-/v1/search`, which answered 500 and then hung.
+
+  The core drives the plugin through `search(onPackage, onEnd)` and reads
+  `item.package.name` from whatever is emitted. The plugin emitted the bare
+  `{name, path, time}` shape, so the endpoint answered 500, and its promise branch
+  resolved to an empty array. Both paths now emit `SearchItem`, and `onEnd` runs on
+  failure too — without it the request hung until the client aborted.
+
+  Fix removing a package, which answered 422 and leaked every object.
+
+  Cloud Storage has no directories, so `<package-name>` is not an object — the files live
+  under the `<package-name>/` prefix. `removePackage` deleted the bare name, which 404s,
+  and left the metadata and every tarball behind. It now deletes the whole prefix.
+
+- 01d2655: Stop a missing tarball from crashing the registry process.
+
+  Cloud Storage reports a missing object through both the `response` handler (404) and
+  the `error` handler, so `readTarball` emitted `error` twice. By the second emit
+  verdaccio has already answered and dropped its listener, and an `error` event with no
+  listener throws — as an uncaught exception, taking the whole process down. The error is
+  now emitted once.
+
+  Fix `unpublish`, which could never remove a package.
+
+  Packages are stored under a name key, so the key carries `name` and its `id` is
+  undefined. `getEntities` returned only that id and `remove` rebuilt the key with
+  `datastore.int(undefined)`, which threw `Cannot read properties of undefined (reading
+'toString')` and answered 422. Entities now carry their own key and `remove` deletes it
+  directly.
+
 ## 11.1.3
 
 ### Patch Changes
