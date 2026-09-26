@@ -143,12 +143,21 @@ export default class GoogleCloudDatabase {
     if (typeof args[0] === 'function') {
       const onPackage = args[0] as (item: searchUtils.SearchItem, cb: () => void) => void;
       const onEnd = args[1] as (err?: Error) => void;
-      debug('search (callback)');
+      // legacy signature: the third argument decides which names are emitted
+      const validateName = args[2] as ((name: string) => boolean) | undefined;
+      debug(
+        'search (callback) args=%d types=%o',
+        args.length,
+        args.map((a): string => typeof a)
+      );
       void (async (): Promise<void> => {
         try {
           const entities = await this.helper.getEntities(this.kind);
-          debug('search (callback) emitting %d packages', entities.length);
-          for (const item of entities) {
+          const selected = validateName
+            ? entities.filter((item): boolean => validateName(item.name))
+            : entities;
+          debug('search (callback) emitting %d of %d packages', selected.length, entities.length);
+          for (const item of selected) {
             await new Promise<void>((resolve): void => {
               onPackage(this.toSearchItem(item.name), resolve);
             });

@@ -218,6 +218,31 @@ describe('Google Cloud Database', () => {
       expect(seen[0].package.name).toBe('alpha-pkg');
     });
 
+    test('callback pattern honours the validateName predicate', async () => {
+      const cloudDatabase = getCloudDatabase();
+      (cloudDatabase as any).helper = {
+        getEntities: () =>
+          Promise.resolve([
+            {name: 'alpha-pkg', key: {}},
+            {name: 'beta-pkg', key: {}},
+          ]),
+      };
+
+      const seen: string[] = [];
+      await new Promise<void>((resolve) => {
+        (cloudDatabase as any).search(
+          (item: any, cb: () => void) => {
+            seen.push(item.package.name);
+            cb();
+          },
+          () => resolve(),
+          (name: string) => name.startsWith('alpha')
+        );
+      });
+
+      expect(seen).toEqual(['alpha-pkg']);
+    });
+
     test('callback pattern ends even when the datastore fails', async () => {
       const cloudDatabase = getCloudDatabase();
       (cloudDatabase as any).helper = {
