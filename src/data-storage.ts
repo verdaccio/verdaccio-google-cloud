@@ -145,13 +145,7 @@ export default class GoogleCloudDatabase {
       const onEnd = args[1] as (err?: Error) => void;
       // legacy signature: the third argument decides which names are emitted
       const validateName = args[2] as ((name: string) => boolean) | undefined;
-      debug(
-        'search (callback) args=%d types=%o',
-        args.length,
-        args.map((a): string => typeof a)
-      );
-      // temporary: the published packages do not match this image, ask the runtime
-      debug('search (callback) caller=%o', new Error('search caller').stack);
+      debug('search (callback)');
       void (async (): Promise<void> => {
         try {
           const entities = await this.helper.getEntities(this.kind);

@@ -255,3 +255,25 @@ it takes; [LOCAL_DEV.md](LOCAL_DEV.md) covers inspecting the data inside them.
 CI additionally runs [`@verdaccio/e2e-cli`](https://www.npmjs.com/package/@verdaccio/e2e-cli)
 against this stack — publish, install, ci, audit, info, deprecate, dist-tags, ping, search
 and unpublish, with npm and pnpm — plus the Cypress web UI tests.
+
+### A limitation worth knowing: search cannot filter
+
+This plugin still implements the **callback-based** storage contract (`get(cb)`,
+`add(name, cb)`, and so on). Verdaccio detects that by arity and wraps it in
+`legacy-storage-adapter.cjs`, whose `search()` looks like this:
+
+```js
+function search(plugin, _query) {
+  // the query is discarded
+  plugin.search(onPackage, onEnd, () => true); // the name predicate always passes
+}
+```
+
+So a search query never reaches the plugin: it emits every package it knows about and
+the adapter hands the whole list back. `/-/v1/search` still answers, and the npm client
+still finds what it is looking for, but result counts and pagination do not narrow to the
+query, which is why the battery's `scenario:search` is excluded in CI.
+
+Fixing it means moving to the **promise-based storage API**, where `search(query)` is
+called directly and the plugin filters on `query.text` — the shape the promise branch in
+`data-storage.ts` already implements.
