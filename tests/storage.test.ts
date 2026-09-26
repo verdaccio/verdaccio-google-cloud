@@ -1,11 +1,11 @@
-import {beforeEach, describe, expect, test, vi} from 'vitest';
-
 import type {Logger} from '@verdaccio/types';
 
-import type {GoogleCloudConfig} from '../types';
 import GoogleCloudStorageHandler from '../src/storage';
 import type {IStorageHelper} from '../src/storage-helper';
+import type {GoogleCloudConfig} from '../types';
 import {generatePackage} from './partials/utils.helpers';
+
+import {beforeEach, describe, expect, test, vi} from 'vitest';
 
 const createLogger = (): Logger => ({
   error: vi.fn(),
