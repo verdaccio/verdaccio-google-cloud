@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master' && github.repository == 'verdaccio/verdaccio-google-cloud'
     outputs:
-      hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
+      has-changesets: ${{ steps.changesets.outputs.has-changesets }}
     steps:
       - name: checkout code repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6
@@ -48,21 +48,20 @@ jobs:
         run: pnpm build
       - name: create versions
         id: changesets
-        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
-          version: pnpm ci:version
-          commit: 'build: release packages'
-          title: 'build: release packages'
-          setupGitUser: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.CHANGESET_RELEASE_TOKEN }}
+          github-token: ${{ secrets.CHANGESET_RELEASE_TOKEN }}
+          version-script: pnpm ci:version
+          commit-message: 'build: release packages'
+          pr-title: 'build: release packages'
+          push-with-git-cli: true
 
   # Publish to npm once the version PR has been merged (no changesets left).
   # Gated by the `npm` environment, which requires manual approval.
   # Skipped on the daily cron so it never nags when there is nothing to publish.
   publish:
     needs: version
-    if: needs.version.outputs.hasChangesets == 'false' && github.event_name != 'schedule'
+    if: needs.version.outputs.has-changesets == 'false' && github.event_name != 'schedule'
     timeout-minutes: 14
     runs-on: ubuntu-latest
     environment: npm
@@ -86,11 +85,12 @@ jobs:
       - name: build
         run: pnpm build
       - name: publish
-        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
-          publish: pnpm ci:publish
-          createGithubReleases: true
-          setupGitUser: true
+          github-token: ${{ secrets.CHANGESET_RELEASE_TOKEN }}
+          publish-script: pnpm ci:publish
+          create-github-releases: true
+          push-git-tags: true
+          push-with-git-cli: true
         env:
-          GITHUB_TOKEN: ${{ secrets.CHANGESET_RELEASE_TOKEN }}
           NPM_CONFIG_REGISTRY: https://registry.npmjs.org
