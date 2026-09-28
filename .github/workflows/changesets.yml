@@ -16,7 +16,7 @@ permissions:
 env:
   CI: true
   PNPM_CACHE_FOLDER: .pnpm-store
-  PNPM_CONFIG_PROVENANCE: 'true'
+  NPM_CONFIG_PROVENANCE: 'true'
 
 jobs:
   # Open/refresh the "build: release packages" version PR from changesets.
@@ -93,4 +93,4 @@ jobs:
           push-git-tags: true
           push-with-git-cli: true
         env:
-          PNPM_CONFIG_REGISTRY: https://registry.npmjs.org
+          NPM_CONFIG_REGISTRY: https://registry.npmjs.org
