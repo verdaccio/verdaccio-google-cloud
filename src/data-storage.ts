@@ -182,24 +182,6 @@ export default class GoogleCloudDatabase {
     })();
   }
 
-  public async filterByQuery(
-    results: searchUtils.SearchItemPkg[],
-    _query: searchUtils.SearchQuery
-  ): Promise<searchUtils.SearchItemPkg[]> {
-    return results;
-  }
-
-  public async getScore(_pkg: searchUtils.SearchItemPkg): Promise<searchUtils.Score> {
-    return {
-      final: 1,
-      detail: {
-        quality: 1,
-        popularity: 1,
-        maintenance: 1,
-      },
-    };
-  }
-
   public async saveToken(token: Token): Promise<void> {
     debug('saveToken user=%o key=%o', token.user, token.key);
     this.logger.trace(
