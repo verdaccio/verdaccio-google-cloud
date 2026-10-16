@@ -74,6 +74,6 @@
     "typescript": "5.9.3",
     "vite": "8.0.16",
     "vite-plugin-dts": "4.5.4",
-    "vitest": "4.1.0"
+    "vitest": "5.0.2"
   }
 }
