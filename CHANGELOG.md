@@ -1,5 +1,11 @@
 # Changelog
 
+## 11.2.1
+
+### Patch Changes
+
+- 15f4720: Remove unused internal search helper methods from the Google Cloud storage plugin.
+
 ## 11.2.0
 
 ### Minor Changes
